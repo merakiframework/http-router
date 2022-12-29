@@ -1,0 +1,13 @@
+{
+  "packages": [
+    "php80",
+    "php80Packages.composer",
+    "php80Extensions.openswoole"
+  ],
+  "shell": {
+    "init_hook": null
+  },
+  "nixpkgs": {
+    "commit": "af9e00071d0971eb292fd5abef334e66eda3cb69"
+  }
+}
