@@ -33,7 +33,10 @@ final class TranslatorTest extends TestCase
 	{
 		return [
 			'/' => ['', 'GetAction'],
-			'/account' => ['', 'GetAction'],
+			'/ping' => ['ping', 'GetAction'],
+			'/pings' => ['pings', 'GetAllAction'],
+			'/user' => ['user', 'GetAction'],
+			'/users' => ['users', 'GetAllAction'],
 		];
 	}
 
@@ -56,8 +59,14 @@ final class TranslatorTest extends TestCase
 	public function noChildSegmentsButParentResource(): array
 	{
 		return [
+			'/ping/123/profile' => ['ping', 'profile', 'GetAction'],
+			'/pings/123/profile' => ['pings', 'profile', 'GetOneAction'],
+			'/user/123/profile' => ['user', 'profile', 'GetAction'],
 			'/users/123/profile' => ['users', 'profile', 'GetOneAction'],
-			'/users/123/friends' => ['users', 'friends', 'GetAllAction'],
+			'/ping/123/likes' => ['ping', 'likes', 'GetAllAction'],
+			'/pings/123/likes' => ['pings', 'likes', 'GetAllAction'],
+			'/user/123/likes' => ['user', 'likes', 'GetAllAction'],
+			'/users/123/likes' => ['users', 'likes', 'GetAllAction'],
 			'/states/qld/suburbs/emerald/registered-businesses' => ['suburbs', 'registered-businesses', 'GetAllAction'],
 		];
 	}
@@ -81,6 +90,10 @@ final class TranslatorTest extends TestCase
 	{
 		return [
 			'/archives/<2022>/<12>/<21>' => ['', 'GetAction'],
+			'/ping/1' => ['ping', 'GetAction'],
+			'/pings/1' => ['pings', 'GetOneAction'],
+			'/user/1' => ['user', 'GetAction'],
+			'/users/1' => ['users', 'GetOneAction']
 		];
 	}
 
@@ -103,6 +116,16 @@ final class TranslatorTest extends TestCase
 	public function parentResourceAndChildSegments(): array
 	{
 		return [
+			'/ping/1/profile/1' => ['ping', 'profile', 'GetAction'],
+			'/pings/1/profile/1' => ['pings', 'profile', 'GetAction'],
+			'/user/1/profile/1' => ['user', 'profile', 'GetAction'],
+			'/users/1/profile/1' => ['users', 'profile', 'GetAction'],
+
+			'/ping/1/likes/1' => ['ping', 'likes', 'GetAction'],
+			'/pings/1/likes/1' => ['pings', 'likes', 'GetOneAction'],
+			'/user/1/likes/1' => ['user', 'likes', 'GetAction'],
+			'/users/1/likes/1' => ['users', 'likes', 'GetOneAction'],
+
 			'/states/qld/suburbs/emerald/registered-businesses/cleaning/pest-control' => ['suburbs', 'registered-businesses', 'GetOneAction'],
 		];
 	}
