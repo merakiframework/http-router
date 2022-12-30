@@ -93,7 +93,7 @@ final class TranslatorTest extends TestCase
 			'/ping/1' => ['ping', 'GetAction'],
 			'/pings/1' => ['pings', 'GetOneAction'],
 			'/user/1' => ['user', 'GetAction'],
-			'/users/1' => ['users', 'GetOneAction']
+			'/users/1' => ['users', 'GetOneAction'],
 		];
 	}
 
