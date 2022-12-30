@@ -3,7 +3,7 @@
     "description": "Maps HTTP requests to HTTP responses in PHP 8+.",
     "type": "library",
     "require": {
-		"php": "^8",
+        "php": "^8",
         "doctrine/inflector": "^2.0",
         "willdurand/negotiation": "^3.1",
         "psr/http-message": "^1.0",
@@ -31,34 +31,35 @@
             "email": "nbish11@hotmail.com"
         }
     ],
-	"autoload": {
-		"psr-4": {
-			"Meraki\\Http\\": "src/"
-		}
-	},
-	"autoload-dev": {
-		"psr-4": {
-			"Meraki\\Http\\": "tests",
-			"Project\\": "examples/"
-		}
-	},
-	"scripts": {
-		"lint": "psalm",
-		"test": "phpunit",
-		"format": "php-cs-fixer fix -vvv",
-		"develop": [
-			"Composer\\Config::disableProcessTimeout",
-			"phpunit-watcher watch"
-		],
-		"changelog": "conventional-changelog",
-		"release": "conventional-changelog --commit",
-		"release:patch": "conventional-changelog --patch --commit",
-		"release:minor": "conventional-changelog --minor --commit",
-		"release:major": "conventional-changelog --major --commit"
-	},
+    "autoload": {
+        "psr-4": {
+            "Meraki\\Http\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Meraki\\Http\\": "tests",
+            "Project\\": "examples/"
+        }
+    },
+    "scripts": {
+        "lint": "psalm",
+        "test": "phpunit",
+        "format": "php-cs-fixer fix -vvv",
+        "develop": [
+            "Composer\\Config::disableProcessTimeout",
+            "phpunit-watcher watch"
+        ],
+        "changelog": "conventional-changelog",
+        "release": "conventional-changelog --commit",
+        "release:patch": "conventional-changelog --patch --commit",
+        "release:minor": "conventional-changelog --minor --commit",
+        "release:major": "conventional-changelog --major --commit"
+    },
     "config": {
         "allow-plugins": {
             "captainhook/plugin-composer": true
         }
-    }
+    },
+    "version": "0.8.0"
 }
