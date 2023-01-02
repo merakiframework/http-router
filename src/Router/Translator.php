@@ -30,6 +30,12 @@ final class Translator
 	{
 		$method = $this->config->inflector->classify($method);
 
+		if (in_array($currentResource, $this->config->excludedWords)) {
+			return $this->config->prefix
+				. $method
+				. $this->config->suffix;
+		}
+
 		if (in_array($currentResource, $this->config->excludedPluralWords)) {
 			return $this->config->prefix
 				. $method

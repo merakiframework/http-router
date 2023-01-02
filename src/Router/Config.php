@@ -47,6 +47,12 @@ final class Config
 	 * @psalm-readonly-allow-private-mutation
 	 * @var string[]
 	 */
+	public array $excludedWords = [];
+
+	/**
+	 * @psalm-readonly-allow-private-mutation
+	 * @var string[]
+	 */
 	public array $excludedSingularWords = [];
 
 	/**
@@ -173,6 +179,18 @@ final class Config
 	{
 		$cloned = clone $this;
 		$cloned->singularIndicator = $name;
+
+		return $cloned;
+	}
+
+	/**
+	 * @param list<string> $words
+	 * @psalm-external-mutation-free
+	 */
+	public function excludeFromConversion(string $word, string ...$words): self
+	{
+		$cloned = clone $this;
+		$cloned->excludedWords = array_merge([$word], $words);
 
 		return $cloned;
 	}

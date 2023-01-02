@@ -130,6 +130,21 @@ final class TranslatorTest extends TestCase
 		];
 	}
 
+	/**
+	 * @test
+	 */
+	public function can_exclude_words_from_singular_plural_conversions(): void
+	{
+		$expectedChildResource = 'terms-and-conditions';
+		$ns = self::REQUEST_HANDLERS_NAMESPACE;
+		$config = Config::create($ns)->excludeFromConversion($expectedChildResource);
+		$sut = new Translator($config);
+
+		$result = $sut->translate('get', '', $expectedChildResource, false);
+
+		$this->assertEquals('GetAction', $result);
+	}
+
 	private function createTranslatorWithDefaultConfig(): Translator
 	{
 		return new Translator(Config::create(self::REQUEST_HANDLERS_NAMESPACE));
