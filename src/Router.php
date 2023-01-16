@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Meraki\Http;
 
 use Meraki\Http\Router\Result;
+use Meraki\Http\RequestTarget;
+use Meraki\Http\Segments;
 use Meraki\Http\Route;
 use Meraki\Http\Router\Config;
 use Meraki\Http\Router\Translator;
@@ -25,10 +27,12 @@ final class Router
 	public Config $config;
 
 	private string $method = '';
-	private string $requestTarget = '';
 
 	/** @psalm-suppress PropertyNotSetInConstructor */
-	private RequestTarget $segments;
+	private RequestTarget $requestTarget;
+
+	/** @psalm-suppress PropertyNotSetInConstructor */
+	private Segments $segments;
 	private string $ns = '';
 	private Translator $translator;
 
@@ -66,8 +70,8 @@ final class Router
 	public function route(string $method, string $requestTarget): Result
 	{
 		$this->method = $this->originalMethod = strtolower($method);
-		$this->requestTarget = strtolower($requestTarget);
-		$this->segments = RequestTarget::getSegments($this->requestTarget);
+		$this->requestTarget = new RequestTarget($requestTarget);
+		$this->segments = $this->requestTarget->getSegments();
 		$this->ns = $this->config->namespace;
 		$this->matches = [];
 		$this->allowedMethods = [];
@@ -253,7 +257,7 @@ final class Router
 	{
 		return Result::found(
 			$this->originalMethod,
-			$this->requestTarget,
+			(string)$this->requestTarget,
 			array_shift($this->matches),
 			$this->matches
 		);
@@ -263,7 +267,7 @@ final class Router
 	{
 		return Result::badRequest(
 			$this->originalMethod,
-			$this->requestTarget,
+			(string)$this->requestTarget,
 			$this->requestHandler,
 			$this->matches
 		);
@@ -273,7 +277,7 @@ final class Router
 	{
 		return Result::notFound(
 			$this->originalMethod,
-			$this->requestTarget,
+			(string)$this->requestTarget,
 			$this->requestHandler,
 			$this->matches
 		);
@@ -283,7 +287,7 @@ final class Router
 	{
 		return Result::methodNotAllowed(
 			$this->originalMethod,
-			$this->requestTarget,
+			(string)$this->requestTarget,
 			$this->allowedMethods,
 			$this->requestHandler,
 			$this->matches
