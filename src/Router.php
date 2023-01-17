@@ -80,17 +80,9 @@ final class Router
 
 		while (!$this->segments->isEmpty()) {
 			$this->urlSegmentToMatch = $this->segments->pop() ?: '';
-
 			$hasNextSegment = $this->segments->hasNext();
-
-			if ($this->urlSegmentToMatch === '') {
-				$nsSegment = $this->config->rootPathSubNamespace;
-			} else {
-				$nsSegment = '\\' . $this->translator->urlSegmentToNamespaceSegment($this->urlSegmentToMatch);
-			}
-
+			$nsSegment = $this->getNamespaceSegmentFromUrlSegment($this->urlSegmentToMatch);
 			$this->previousNamespaceSegment = $this->currentNamespaceSegment;
-
 
 			$className = $this->translator->translate(
 				$this->method,
@@ -139,6 +131,15 @@ final class Router
 		}
 
 		return $this->notFound();
+	}
+
+	private function getNamespaceSegmentFromUrlSegment(string $urlSegment): string
+	{
+		if ($urlSegment === '') {
+			return $this->config->rootPathSubNamespace;
+		}
+
+		return '\\' . $this->translator->urlSegmentToNamespaceSegment($urlSegment);
 	}
 
 	private function findAllowedMethods(string $className, bool $hasNextSegment): void
