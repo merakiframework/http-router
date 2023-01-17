@@ -260,6 +260,9 @@ final class Config
 			'string' => function (string $segment): bool {
 				return $segment !== '';
 			},
+			'float' => function (string $value): bool {
+				return filter_var($value, FILTER_VALIDATE_FLOAT) !== false;
+			}
 		];
 	}
 }
