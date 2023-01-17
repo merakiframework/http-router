@@ -13,7 +13,6 @@ final class Segments implements Countable
 	 */
 	public function __construct(private array $segments)
 	{
-
 	}
 
 	public function hasNext(): bool

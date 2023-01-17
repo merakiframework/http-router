@@ -49,7 +49,7 @@ final class ConfigTest extends TestCase
 			['+1353.0316547'],
 			['-8E+3'],
 			['13213.03266e-13'],
-			['8']
+			['8'],
 		];
 	}
 
@@ -83,7 +83,7 @@ final class ConfigTest extends TestCase
 			['-1.a'],
 			['.'],
 			['-.'],
-			['1+']
+			['1+'],
 		];
 	}
 }

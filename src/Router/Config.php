@@ -262,7 +262,7 @@ final class Config
 			},
 			'float' => function (string $value): bool {
 				return filter_var($value, FILTER_VALIDATE_FLOAT) !== false;
-			}
+			},
 		];
 	}
 }
