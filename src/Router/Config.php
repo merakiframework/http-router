@@ -76,18 +76,11 @@ final class Config
 	 */
 	public string $namespace = '';
 
-	/**
-	 * @psalm-readonly-allow-private-mutation
-	 * @var array<string, callable>
-	 */
-	public array $typeValidators = [];
-
 	private function __construct(string $namespace)
 	{
 		$this->setNamespace($namespace);
 		$this->inflector = InflectorFactory::create()->build();
 		$this->logger = new NullLogger();
-		$this->typeValidators = self::defaultTypeValidators();
 	}
 
 	public static function create(string $namespace): self
@@ -247,22 +240,5 @@ final class Config
 		}
 
 		$this->namespace = trim($namespace, '\\');
-	}
-
-	/**
-	 * @psalm-mutation-free
-	 * @return array<string, callable>
-	 */
-	private static function defaultTypeValidators(): array
-	{
-		return [
-			'int' => 'ctype_digit',
-			'string' => function (string $segment): bool {
-				return $segment !== '';
-			},
-			'float' => function (string $value): bool {
-				return filter_var($value, FILTER_VALIDATE_FLOAT) !== false;
-			},
-		];
 	}
 }

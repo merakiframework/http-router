@@ -12,6 +12,7 @@ use Meraki\Http\Router\Translator;
 use Meraki\Http\Router\Exception\SignatureMismatch;
 use Meraki\Http\Router\Exception\UnallowedVariadicParameter;
 use InvalidArgumentException;
+use Meraki\Http\Router\StringType;
 use RuntimeException;
 
 final class Router
@@ -216,20 +217,21 @@ final class Router
 				break;
 			}
 
-			$validators = $this->config->typeValidators;
-
 			foreach ($param->types as $type) {
-				foreach ($validators as $validatorType => $validator) {
-					if (($type === $validatorType) && $validator($segmentToMatchParam)) {
-						$route = $route->addArgument($this->castTo($type, $segmentToMatchParam, $param->name));
-						continue 3;
-					}
+				try {
+					/** @psalm-suppress MixedAssignment */
+					$castedValue = StringType::fromString($segmentToMatchParam)->castTo($type);
+					$route = $route->addArgument($castedValue);
+					break; // move on to next argument
+				} catch (RuntimeException $e) {
+					continue; // try next type
 				}
 			}
 		}
 
 		$this->matches[] = $route;
 	}
+
 	private function matchVariadicParameters(Route $route): Route
 	{
 		if (!$route->parameters->variadic) {
@@ -239,14 +241,14 @@ final class Router
 		$segmentToMatchParam = $this->urlSegmentToMatch;
 
 		do {
-			$validators = $this->config->typeValidators;
-
 			foreach ($param->types as $type) {
-				foreach ($validators as $validatorType => $validator) {
-					if (($type === $validatorType) && $validator($segmentToMatchParam)) {
-						$route = $route->addArgument($this->castTo($type, $segmentToMatchParam, $param->name));
-						continue 3;
-					}
+				try {
+					/** @psalm-suppress MixedAssignment */
+					$castedValue = StringType::fromString($segmentToMatchParam)->castTo($type);
+					$route = $route->addArgument($castedValue);
+					break; // move on to next argument
+				} catch (RuntimeException $e) {
+					continue; // try next type
 				}
 			}
 		} while ($segmentToMatchParam = $this->segments->pop());
@@ -293,14 +295,5 @@ final class Router
 			$this->requestHandler,
 			$this->matches
 		);
-	}
-
-	private function castTo(string $type, mixed $value, string $paramName): mixed
-	{
-		return match ($type) {
-			'int' => (int) $value,
-			'string' => $value, // already a string
-			default => throw new InvalidArgumentException('Cannot cast parameter "' . $paramName . '" to type "' . $type . '"!')
-		};
 	}
 }
