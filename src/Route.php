@@ -53,7 +53,7 @@ final class Route
 		return sprintf('%s::%s(%s)', $this->requestHandler, $this->invokeMethod, (string)$this->parameters);
 	}
 
-	public function __toString()
+	public function __toString(): string
 	{
 		return $this->toStringWithParameters();
 	}
