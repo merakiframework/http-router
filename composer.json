@@ -56,6 +56,5 @@
         "allow-plugins": {
             "captainhook/plugin-composer": true
         }
-    },
-    "version": "0.8.0"
+    }
 }
