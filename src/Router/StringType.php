@@ -37,8 +37,54 @@ final class StringType
 			'string' => $this->castToString(),
 			'int', 'integer' => $this->castToInt(),
 			'float' => $this->castToFloat(),
+			'array' => $this->castToArray(),
 			default => throw new InvalidArgumentException("Cannot cast to '$type': type is not supported.")
 		};
+	}
+
+	public function castToArray(): array
+	{
+		if (empty($this->value)) {
+			throw new RuntimeException('Cannot cast to array: array is empty');
+		}
+
+		$list = explode(',', $this->value);
+		$expectedType = '';
+
+		// find element type for list
+		foreach (['int', 'float', 'string'] as $type) {
+			try {
+				/** @psalm-suppress MixedAssignment */
+				$el = self::fromString($list[0])->castTo($type);
+				$expectedType = gettype($el) === 'double' ? 'float' : gettype($el);
+				break;
+			} catch (\Throwable $th) {
+				// continue to next type
+			}
+		}
+
+		if (!$expectedType) {
+			throw new RuntimeException('cannot cast to array: could not determine element type');
+		}
+
+		foreach ($list as $index => $element) {
+			if ($element === '') {
+				throw new \RuntimeException('Cannot cast to array: missing element in list');
+			}
+
+			try {
+				// cast array elements to correct type
+				/** @psalm-suppress MixedAssignment */
+				$el = self::fromString($element)->castTo($expectedType);
+				/** @psalm-suppress MixedAssignment */
+				$list[$index] = $el;
+			} catch (RuntimeException $e) {
+				// if casting throws exception then one of the elements is a different type
+				throw new RuntimeException('cannot cast to array: elements are not all of the same type');
+			}
+		}
+
+		return $list;
 	}
 
 	public function castToFloat(): float
