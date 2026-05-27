@@ -118,13 +118,11 @@ final class StringType
 	 */
 	public function castToInt(): int
 	{
-		$intValue = (int) $this->value;
-
-		if ($this->value === (string)$intValue) {
-			return $intValue;
+		if (!preg_match('/^-?\d+$/', $this->value)) {
+			throw new RuntimeException('Cannot cast to integer: value is not a valid integer.');
 		}
 
-		throw new RuntimeException('Cannot cast to integer: casting will lose information.');
+		return (int) $this->value;
 	}
 
 	public function castToString(): string

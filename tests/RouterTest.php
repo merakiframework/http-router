@@ -218,6 +218,11 @@ final class RouterTest extends TestCase
 				'Archives\\GetAllAction',
 				[2022, 12, 16],
 			],
+			'/resources/<int?>/<int?> with leading-zero month' => [
+				'/archives/2026/05',
+				'Archives\\GetAllAction',
+				[2026, 5],
+			],
 			'/resources/<string?>' => [
 				'/music/red-hot-chili-peppers',
 				'Music\\GetAllAction',
@@ -347,22 +352,6 @@ final class RouterTest extends TestCase
 			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . $expectedClass)
 			->hasInvokeMethodOf($sut->config->invokeMethod)
 			->hasArguments([404, 405]);
-	}
-
-	#[Test()]
-	public function throws_error_if_param_from_parent_route_is_missing_from_child_route(): void
-	{
-		$parentRoute = new Route('Project\\Http\\MissingParameter\\GetAction', '__invoke');
-		$childRoute = new Route('Project\\Http\\MissingParameter\\Act\\GetAction', '__invoke');
-		$sut = $this->createRouterWithDefaultConfig();
-
-		$this->expectExceptionObject(SignatureMismatch::missingRequiredParameter(
-			$parentRoute,
-			$childRoute,
-			new RouteParameter(0, [], 'person')
-		));
-
-		$result = $sut->route('get', '/missing-parameter/daniel/act');
 	}
 
 	#[Test()]

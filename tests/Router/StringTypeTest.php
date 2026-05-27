@@ -94,6 +94,56 @@ final class StringTypeTest extends TestCase
 	}
 
 	#[Test()]
+	#[DataProvider('validInts')]
+	public function can_convert_ints_if_value_is_an_int(string $value, int $expected): void
+	{
+		$str = StringType::fromString($value);
+
+		$castedValue = $str->castTo('int');
+
+		$this->assertSame($expected, $castedValue);
+	}
+
+	public static function validInts(): array
+	{
+		return [
+			'plain digit' => ['5', 5],
+			'zero' => ['0', 0],
+			'leading zero (single)' => ['05', 5],
+			'leading zeros (multiple)' => ['007', 7],
+			'all zeros' => ['000', 0],
+			'negative' => ['-5', -5],
+			'negative with leading zero' => ['-05', -5],
+			'large value' => ['2026', 2026],
+		];
+	}
+
+	#[Test()]
+	#[DataProvider('invalidInts')]
+	public function returns_null_if_value_is_not_an_int(string $value): void
+	{
+		$exception = new RuntimeException('Cannot cast to integer: value is not a valid integer.');
+		$str = StringType::fromString($value);
+
+		$this->expectExceptionObject($exception);
+
+		$castedValue = $str->castTo('int');
+	}
+
+	public static function invalidInts(): array
+	{
+		return [
+			'alphabetic' => ['abc'],
+			'decimal' => ['1.5'],
+			'leading plus' => ['+5'],
+			'trailing junk' => ['5abc'],
+			'leading whitespace' => [' 5'],
+			'empty string' => [''],
+			'lone minus' => ['-'],
+		];
+	}
+
+	#[Test()]
 	#[DataProvider('validArrays')]
 	public function can_convert_to_array_if_value_is_array_like(string $value, array $expected): void
 	{
