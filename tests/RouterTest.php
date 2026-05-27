@@ -365,6 +365,26 @@ final class RouterTest extends TestCase
 		$result = $sut->route('get', '/missing-parameter/daniel/act');
 	}
 
+	#[Test()]
+	public function more_specific_route_takes_priority_over_less_specific(): void
+	{
+		$expectedMethod = 'get';
+		$expectedRequestTarget = '/persons/schema';
+		$sut = $this->createRouterWithDefaultConfig();
+
+		$result = $sut->route($expectedMethod, $expectedRequestTarget);
+
+		$this->assertResult($result)
+			->hasStatusOf(200)
+			->usedMethodForMatch($expectedMethod)
+			->usedRequestTargetForMatch($expectedRequestTarget)
+			->hasNoClosestMatches()
+			->hasRouteThat()
+			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . 'Persons\\Schema\\GetOneAction')
+			->hasInvokeMethodOf($sut->config->invokeMethod)
+			->hasNoArguments();
+	}
+
 	private function createRouterWithDefaultConfig(): Router
 	{
 		return new Router(self::DEFAULT_TEST_FIXTURES_NAMESPACE);

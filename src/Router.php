@@ -52,8 +52,6 @@ final class Router
 	 * @var string[]
 	 */
 	private array $allowedMethods = [];
-	private string $currentNamespaceSegment = '';
-
 	private string $previouslyMatchedUrlSegment = '';
 	private string $urlSegmentToMatch = '';
 
@@ -78,7 +76,6 @@ final class Router
 		$this->ns = $this->config->namespace;
 		$this->matches = [];
 		$this->allowedMethods = [];
-		$this->currentNamespaceSegment = '';
 
 		while (!$this->segments->isEmpty()) {
 			$this->urlSegmentToMatch = $this->segments->pop() ?? '';
@@ -96,6 +93,11 @@ final class Router
 			switch (true) {
 				case class_exists($this->requestHandler):
 					$this->previouslyMatchedUrlSegment = $this->urlSegmentToMatch;
+
+					if ($hasNextSegment && $this->hasMoreSpecificRoute()) {
+						break;
+					}
+
 					$this->buildRoute();
 					break;
 
@@ -254,6 +256,38 @@ final class Router
 		} while ($segmentToMatchParam = $this->segments->pop());
 
 		return $route;
+	}
+
+	private function hasMoreSpecificRoute(): bool
+	{
+		$nextSegment = $this->segments->peek();
+
+		if ($nextSegment === null) {
+			return false;
+		}
+
+		// Routes with variadic params rely on buildRoute()'s parent/child detection; don't bypass it.
+		/** @psalm-suppress ArgumentTypeCoercion */
+		if ((new Route($this->requestHandler, $this->config->invokeMethod))->parameters->hasVariadic()) {
+			return false;
+		}
+
+		$nextNs = $this->ns . $this->getNamespaceSegmentFromUrlSegment($nextSegment);
+		$classifiedMethod = $this->config->inflector->classify($this->method);
+		$prefix = $this->config->prefix;
+		$suffix = $this->config->suffix;
+
+		foreach ([
+			$prefix . $classifiedMethod . $suffix,
+			$prefix . $classifiedMethod . $this->config->pluralIndicator . $suffix,
+			$prefix . $classifiedMethod . $this->config->singularIndicator . $suffix,
+		] as $candidate) {
+			if (class_exists($nextNs . '\\' . $candidate)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private function found(): Result
