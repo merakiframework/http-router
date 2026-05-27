@@ -4,7 +4,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Meraki\Http\Router;
 use Meraki\Http\Router\Config;
 use Laminas\Diactoros\ServerRequestFactory;
-use Narrowspark\HttpEmitter\SapiEmitter;
+use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 
 $config = Config::create('Project\\Http\\')
 	->excludePluralWords('music', 'registered-businesses', 'archives');

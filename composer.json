@@ -17,7 +17,8 @@
         "friendsofphp/php-cs-fixer": "^3.95",
         "spatie/phpunit-watcher": "^1.24",
         "captainhook/captainhook": "^5.29",
-        "ramsey/conventional-commits": "^1.7"
+        "ramsey/conventional-commits": "^1.7",
+        "laminas/laminas-httphandlerrunner": "^2.13"
     },
     "license": "MIT",
     "authors": [
