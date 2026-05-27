@@ -272,22 +272,16 @@ final class Router
 			return false;
 		}
 
+		$hasNextNextSegment = count($this->segments) > 1;
 		$nextNs = $this->ns . $this->getNamespaceSegmentFromUrlSegment($nextSegment);
-		$classifiedMethod = $this->config->inflector->classify($this->method);
-		$prefix = $this->config->prefix;
-		$suffix = $this->config->suffix;
+		$nextClassName = $this->translator->translate(
+			$this->method,
+			$this->urlSegmentToMatch,
+			$nextSegment,
+			$hasNextNextSegment
+		);
 
-		foreach ([
-			$prefix . $classifiedMethod . $suffix,
-			$prefix . $classifiedMethod . $this->config->pluralIndicator . $suffix,
-			$prefix . $classifiedMethod . $this->config->singularIndicator . $suffix,
-		] as $candidate) {
-			if (class_exists($nextNs . '\\' . $candidate)) {
-				return true;
-			}
-		}
-
-		return false;
+		return class_exists($nextNs . '\\' . $nextClassName);
 	}
 
 	private function found(): Result

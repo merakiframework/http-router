@@ -57,14 +57,14 @@ final class TranslatorTest extends TestCase
 	{
 		return [
 			'/ping/123/profile' => ['ping', 'profile', 'GetAction'],
-			'/pings/123/profile' => ['pings', 'profile', 'GetOneAction'],
+			'/pings/123/profile' => ['pings', 'profile', 'GetAction'],
 			'/user/123/profile' => ['user', 'profile', 'GetAction'],
-			'/users/123/profile' => ['users', 'profile', 'GetOneAction'],
+			'/users/123/profile' => ['users', 'profile', 'GetAction'],
 			'/ping/123/likes' => ['ping', 'likes', 'GetAllAction'],
 			'/pings/123/likes' => ['pings', 'likes', 'GetAllAction'],
 			'/user/123/likes' => ['user', 'likes', 'GetAllAction'],
 			'/users/123/likes' => ['users', 'likes', 'GetAllAction'],
-			'/states/qld/suburbs/emerald/registered-businesses' => ['suburbs', 'registered-businesses', 'GetAllAction'],
+			'/states/qld/suburbs/emerald/registered-businesses' => ['suburbs', 'registered-businesses', 'GetAction'],
 		];
 	}
 
@@ -119,7 +119,7 @@ final class TranslatorTest extends TestCase
 			'/user/1/likes/1' => ['user', 'likes', 'GetAction'],
 			'/users/1/likes/1' => ['users', 'likes', 'GetOneAction'],
 
-			'/states/qld/suburbs/emerald/registered-businesses/cleaning/pest-control' => ['suburbs', 'registered-businesses', 'GetOneAction'],
+			'/states/qld/suburbs/emerald/registered-businesses/cleaning/pest-control' => ['suburbs', 'registered-businesses', 'GetAction'],
 		];
 	}
 
@@ -134,6 +134,37 @@ final class TranslatorTest extends TestCase
 		$result = $sut->translate('get', '', $expectedChildResource, false);
 
 		$this->assertEquals('GetAction', $result);
+	}
+
+	#[Test()]
+	public function compound_words_default_to_get_action_without_explicit_config(): void
+	{
+		$sut = $this->createTranslatorWithDefaultConfig();
+
+		$result = $sut->translate('get', '', 'terms-and-conditions', false);
+
+		$this->assertEquals('GetAction', $result);
+	}
+
+	#[Test()]
+	public function can_define_invariant_plural_with_inflection_rule(): void
+	{
+		$config = Config::create(self::REQUEST_HANDLERS_NAMESPACE)
+			->withInflectionRule('music', 'music');
+		$sut = new Translator($config);
+
+		$this->assertEquals('GetAllAction', $sut->translate('get', '', 'music', false));
+	}
+
+	#[Test()]
+	public function can_override_irregular_plural_with_inflection_rule(): void
+	{
+		$config = Config::create(self::REQUEST_HANDLERS_NAMESPACE)
+			->withInflectionRule('person', 'persons');
+		$sut = new Translator($config);
+
+		$this->assertEquals('GetAllAction', $sut->translate('get', '', 'persons', false));
+		$this->assertEquals('GetAction', $sut->translate('get', '', 'person', false));
 	}
 
 	private function createTranslatorWithDefaultConfig(): Translator

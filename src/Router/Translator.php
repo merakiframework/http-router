@@ -46,11 +46,22 @@ final class Translator
 				. $this->config->suffix;
 		}
 
+		// Compound words (containing a word separator) are verb/action routes, not RESTful
+		// resources, unless a custom inflection rule has been registered for this word.
+		$hasCustomRule = array_key_exists($currentResource, $this->config->singularToPlural)
+			|| array_key_exists($currentResource, $this->config->pluralToSingular);
+
+		if (!$hasCustomRule && str_contains($currentResource, '-')) {
+			return $this->config->prefix . $method . $this->config->suffix;
+		}
+
 		if ($parentResource !== '' && !$hasNextSegment) {
 			if ($this->isPlural($parentResource) && $this->isSingular($currentResource)) {
+				// Sub-resource/action route (e.g. /persons/schema → Persons\Schema\GetAction).
+				// This is NOT a REST ID — the ID case is handled by the parent's GetOneAction
+				// consuming the segment as an argument when no sub-namespace class exists.
 				return $this->config->prefix
 					. $method
-					. $this->config->singularIndicator
 					. $this->config->suffix;
 			}
 
@@ -119,13 +130,23 @@ final class Translator
 
 	private function isSingular(string $word): bool
 	{
-		return $word !== '' &&
-			$this->config->inflector->singularize($word) === $word;
+		if (array_key_exists($word, $this->config->singularToPlural)) {
+			return true;
+		}
+
+		return $word !== ''
+			&& !array_key_exists($word, $this->config->pluralToSingular)
+			&& $this->config->inflector->singularize($word) === $word;
 	}
 
 	private function isPlural(string $word): bool
 	{
-		return $word !== '' &&
-			$this->config->inflector->pluralize($word) === $word;
+		if (array_key_exists($word, $this->config->pluralToSingular)) {
+			return true;
+		}
+
+		return $word !== ''
+			&& !array_key_exists($word, $this->config->singularToPlural)
+			&& $this->config->inflector->pluralize($word) === $word;
 	}
 }

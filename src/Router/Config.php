@@ -180,6 +180,38 @@ final class Config
 	}
 
 	/**
+	 * @psalm-readonly-allow-private-mutation
+	 * @var array<string,string>
+	 */
+	public array $singularToPlural = [];
+
+	/**
+	 * @psalm-readonly-allow-private-mutation
+	 * @var array<string,string>
+	 */
+	public array $pluralToSingular = [];
+
+	/**
+	 * Override the inflector's singular↔plural mapping for a specific word.
+	 * Pass the same word for both arguments to mark it as invariant (e.g. music→music).
+	 * Custom rules also bypass the compound-word GetAction default, so you can use
+	 * withInflectionRule('registered-businesses', 'registered-businesses') to treat a
+	 * hyphenated compound word as a RESTful resource.
+	 *
+	 * @psalm-external-mutation-free
+	 */
+	public function withInflectionRule(string $singular, string $plural): self
+	{
+		$cloned = clone $this;
+		$cloned->singularToPlural[$singular] = $plural;
+		$cloned->pluralToSingular[$plural] = $singular;
+
+		return $cloned;
+	}
+
+	/**
+	 * @deprecated Use withInflectionRule() for inflection overrides. Compound words
+	 *             now default to GetAction automatically without any configuration.
 	 * @param list<string> $words
 	 * @psalm-external-mutation-free
 	 */
@@ -192,6 +224,8 @@ final class Config
 	}
 
 	/**
+	 * @deprecated Use withInflectionRule($singular, $singular) for words that should
+	 *             not follow standard singular/plural patterns.
 	 * @param list<string> $words
 	 * @psalm-external-mutation-free
 	 */
@@ -204,6 +238,9 @@ final class Config
 	}
 
 	/**
+	 * @deprecated Use withInflectionRule($singular, $plural) to register a custom
+	 *             plural form, or withInflectionRule($word, $word) for invariant nouns
+	 *             (e.g. music, sheep).
 	 * @param list<string> $words
 	 * @psalm-external-mutation-free
 	 */

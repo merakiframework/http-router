@@ -359,10 +359,30 @@ final class RouterTest extends TestCase
 		$this->expectExceptionObject(SignatureMismatch::missingRequiredParameter(
 			$parentRoute,
 			$childRoute,
-			new RouteParameter(0, [], 'person', null)
+			new RouteParameter(0, [], 'person')
 		));
 
 		$result = $sut->route('get', '/missing-parameter/daniel/act');
+	}
+
+	#[Test()]
+	public function id_segment_after_plural_resource_is_consumed_as_argument_when_no_sub_namespace_exists(): void
+	{
+		$expectedMethod = 'get';
+		$expectedRequestTarget = '/persons/daniel';
+		$sut = $this->createRouterWithDefaultConfig();
+
+		$result = $sut->route($expectedMethod, $expectedRequestTarget);
+
+		$this->assertResult($result)
+			->hasStatusOf(200)
+			->usedMethodForMatch($expectedMethod)
+			->usedRequestTargetForMatch($expectedRequestTarget)
+			->hasNoClosestMatches()
+			->hasRouteThat()
+			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . 'Persons\\GetOneAction')
+			->hasInvokeMethodOf($sut->config->invokeMethod)
+			->hasArguments(['daniel']);
 	}
 
 	#[Test()]
@@ -380,7 +400,7 @@ final class RouterTest extends TestCase
 			->usedRequestTargetForMatch($expectedRequestTarget)
 			->hasNoClosestMatches()
 			->hasRouteThat()
-			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . 'Persons\\Schema\\GetOneAction')
+			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . 'Persons\\Schema\\GetAction')
 			->hasInvokeMethodOf($sut->config->invokeMethod)
 			->hasNoArguments();
 	}
