@@ -10,6 +10,6 @@ final class GetAction
 {
 	public function __invoke()
 	{
-		return new TextResponse("variadic params in parent error");
+		return new TextResponse("should throw an UnallowedVariadicParameter exception because the parent action has a variadic parameter");
 	}
 }

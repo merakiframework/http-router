@@ -9,6 +9,6 @@ final class GetOneAction
 {
     public function __invoke(): TextResponse
     {
-        return new TextResponse('GET /persons/schema');
+        return new TextResponse('GET /persons/schema (GetOneAction)');
     }
 }

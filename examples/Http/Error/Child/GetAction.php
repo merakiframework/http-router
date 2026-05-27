@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Project\Http\VariadicParamsInParent\Act;
+namespace Project\Http\Error\Child;
 
 final class GetAction
 {

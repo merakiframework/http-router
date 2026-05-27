@@ -9,6 +9,6 @@ final class GetAllAction
 {
 	public function __invoke(string $stateAbbr, string $suburbName, string ...$offersTheseServices)
 	{
-		return new TextResponse("GET /states/$stateAbbr/suburbs/$suburbName/registered-businesses");
+		return new TextResponse("GET /states/$stateAbbr/suburbs/$suburbName/registered-businesses" . (0 === count($offersTheseServices) ? '' : '/'.implode('/', $offersTheseServices)));
 	}
 }

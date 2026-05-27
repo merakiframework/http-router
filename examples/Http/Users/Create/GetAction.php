@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace Project\Http\Contacts;
+namespace Project\Http\Users\Create;
 
 use Laminas\Diactoros\Response\TextResponse;
 
-final class GetAllAction
+final class GetAction
 {
 	public function __invoke()
 	{
-		return new TextResponse('GET /contacts');
+		return new TextResponse('GET /users/create');
 	}
 }
