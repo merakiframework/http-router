@@ -10,6 +10,7 @@ use Meraki\Http\RouteParameters;
  * or match a request-handler.
  *
  * @psalm-immutable
+ * @psalm-api
  */
 final class Route
 {
@@ -23,7 +24,7 @@ final class Route
 		public string $requestHandler,
 		public string $invokeMethod,
 		public array $arguments = [],
-		RouteParameters $parameters = null,
+		?RouteParameters $parameters = null,
 	) {
 		$this->parameters = $parameters ?: RouteParameters::reflectOn($requestHandler, $invokeMethod);
 	}

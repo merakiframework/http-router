@@ -6,13 +6,19 @@ namespace Meraki\Http\Router\Exception;
 use Meraki\Http\Router\Exception;
 use InvalidArgumentException;
 
-class InvalidArgument extends InvalidArgumentException implements Exception
+final class InvalidArgument extends InvalidArgumentException implements Exception
 {
+	/**
+	 * @psalm-pure
+	 */
 	public static function namespaceValueIsMissing(): self
 	{
 		return new self('A value was not provided for the namespace.');
 	}
 
+	/**
+	 * @psalm-pure
+	 */
 	public static function namespaceCannotBeInGlobalScope(): self
 	{
 		return new self('Namespace cannot be in the global scope.');

@@ -11,6 +11,9 @@ use RuntimeException;
 
 final class SignatureMismatch extends RuntimeException implements Exception
 {
+	/**
+	 * @psalm-mutation-free
+	 */
 	public static function incorrectTypes(Route $pRoute, Route $cRoute, RouteParameter $parentParam, RouteParameter $childParam): self
 	{
 		$template = 'Route "%s" must have the same type signature as parent resource "%s": expected type[s] "%s" at position %d, got "%s".';
@@ -25,6 +28,9 @@ final class SignatureMismatch extends RuntimeException implements Exception
 		));
 	}
 
+	/**
+	 * @psalm-pure
+	 */
 	public static function missingRequiredParameter(Route $parentRoute, Route $childRoute, RouteParameter $parentParam): self
 	{
 		$template = 'Parameter #%d ($%s) from parent request-handler "%s" is missing from child request-handler "%s", or is not in the same position.';

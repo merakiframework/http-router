@@ -8,8 +8,11 @@ use InvalidArgumentException;
 
 final class UnallowedVariadicParameter extends InvalidArgumentException
 {
+	/**
+	 * @psalm-mutation-free
+	 */
 	public function __construct(Route $pRoute, Route $cRoute)
 	{
-		parent::__construct("parent route '{$pRoute}' cannot contain variadic parameters");
+		parent::__construct("parent route '{$pRoute}' cannot contain variadic parameters when matched with '{$cRoute}'");
 	}
 }

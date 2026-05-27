@@ -6,6 +6,7 @@ namespace Meraki\Http;
 
 /**
  * @psalm-immutable
+ * @psalm-api
  */
 final class RouteParameter
 {

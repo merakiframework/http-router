@@ -11,6 +11,9 @@ use Doctrine\Inflector\InflectorFactory;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Psr\Log\NullLogger;
 
+/**
+ * @psalm-api
+ */
 final class Config
 {
 	/**
@@ -223,12 +226,18 @@ final class Config
 		return $cloned;
 	}
 
+	/**
+	 * @psalm-external-mutation-free
+	 */
 	public function __clone()
 	{
 		$this->inflector = clone $this->inflector;
 		$this->logger = clone $this->logger;
 	}
 
+	/**
+	 * @psalm-external-mutation-free
+	 */
 	private function setNamespace(string $namespace): void
 	{
 		if ($namespace === '') {

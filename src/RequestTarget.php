@@ -9,11 +9,17 @@ final class RequestTarget
 {
 	private string $path;
 
+	/**
+	 * @psalm-mutation-free
+	 */
 	public function __construct(string $path)
 	{
 		$this->path = strtolower($path);
 	}
 
+	/**
+	 * @psalm-mutation-free
+	 */
 	public function getSegments(): Segments
 	{
 		$segments = explode('/', $this->path);

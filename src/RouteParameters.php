@@ -8,6 +8,7 @@ use RuntimeException;
 
 /**
  * @psalm-immutable
+ * @psalm-api
  */
 final class RouteParameters implements \Countable
 {
@@ -35,6 +36,7 @@ final class RouteParameters implements \Countable
 		$required = [];
 		$optional = [];
 		$variadic = null;
+		/** @psalm-suppress ImpureMethodCall */
 		$reflectionMethod = new \ReflectionMethod($fqcn, $method);
 
 		foreach ($reflectionMethod->getParameters() as $param) {
@@ -88,6 +90,7 @@ final class RouteParameters implements \Countable
 		return $this->variadic !== null;
 	}
 
+	#[\Override]
 	public function count(): int
 	{
 		return count($this->required) + count($this->optional) + ($this->variadic ? 1 : 0);

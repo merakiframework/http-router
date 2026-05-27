@@ -15,6 +15,9 @@ use InvalidArgumentException;
 use Meraki\Http\Router\StringType;
 use RuntimeException;
 
+/**
+ * @psalm-api
+ */
 final class Router
 {
 	/**
@@ -50,7 +53,6 @@ final class Router
 	 */
 	private array $allowedMethods = [];
 	private string $currentNamespaceSegment = '';
-	private string $previousNamespaceSegment = '';
 
 	private string $previouslyMatchedUrlSegment = '';
 	private string $urlSegmentToMatch = '';
@@ -77,14 +79,11 @@ final class Router
 		$this->matches = [];
 		$this->allowedMethods = [];
 		$this->currentNamespaceSegment = '';
-		$this->previousNamespaceSegment = '';
 
 		while (!$this->segments->isEmpty()) {
-			$this->urlSegmentToMatch = $this->segments->pop() ?: '';
+			$this->urlSegmentToMatch = $this->segments->pop() ?? '';
 			$hasNextSegment = $this->segments->hasNext();
 			$nsSegment = $this->getNamespaceSegmentFromUrlSegment($this->urlSegmentToMatch);
-			$this->previousNamespaceSegment = $this->currentNamespaceSegment;
-
 			$className = $this->translator->translate(
 				$this->method,
 				$this->previouslyMatchedUrlSegment,
@@ -127,7 +126,8 @@ final class Router
 			return $this->found();
 		}
 
-		if (!empty($this->allowedMethods)) {
+		/** @psalm-suppress TypeDoesNotContainType */
+		if ($this->allowedMethods !== []) {
 			return $this->methodNotAllowed();
 		}
 
@@ -213,7 +213,7 @@ final class Router
 			$segmentToMatchParam = $this->segments->pop();
 
 			// all required params have been matched to segments
-			if (!$segmentToMatchParam) {
+			if ($segmentToMatchParam === null) {
 				break;
 			}
 
@@ -258,20 +258,13 @@ final class Router
 
 	private function found(): Result
 	{
+		$route = array_shift($this->matches);
+		assert($route !== null);
+
 		return Result::found(
 			$this->originalMethod,
 			(string)$this->requestTarget,
-			array_shift($this->matches),
-			$this->matches
-		);
-	}
-
-	private function badRequest(): Result
-	{
-		return Result::badRequest(
-			$this->originalMethod,
-			(string)$this->requestTarget,
-			$this->requestHandler,
+			$route,
 			$this->matches
 		);
 	}

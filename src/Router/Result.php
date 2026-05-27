@@ -5,6 +5,9 @@ namespace Meraki\Http\Router;
 
 use Meraki\Http\Route;
 
+/**
+ * @psalm-api
+ */
 final class Result
 {
 	/**
@@ -20,6 +23,9 @@ final class Result
 	 */
 	public ?array $allowedMethods = null;
 
+	/**
+	 * @psalm-mutation-free
+	 */
 	private function __construct(
 		public int $status,
 		public string $method,

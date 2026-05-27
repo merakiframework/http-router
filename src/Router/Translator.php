@@ -22,6 +22,9 @@ use Meraki\Http\Router\Config;
  */
 final class Translator
 {
+	/**
+	 * @psalm-mutation-free
+	 */
 	public function __construct(private Config $config)
 	{
 	}
@@ -106,6 +109,9 @@ final class Translator
 		return $this->config->inflector->classify($word);
 	}
 
+	/**
+	 * @psalm-api
+	 */
 	public function namespaceSegmentToUrlSegment(string $word): string
 	{
 		return $this->config->inflector->urlize($word);

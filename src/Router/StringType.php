@@ -6,6 +6,9 @@ namespace Meraki\Http\Router;
 use InvalidArgumentException;
 use RuntimeException;
 
+/**
+ * @psalm-api
+ */
 final class StringType
 {
 	/** @var array<string, string> */
@@ -15,15 +18,24 @@ final class StringType
 		'string' => '/^.+$/',
 	];
 
+	/**
+	 * @psalm-mutation-free
+	 */
 	public function __construct(private string $value)
 	{
 	}
 
+	/**
+	 * @psalm-pure
+	 */
 	public static function fromString(string $value): self
 	{
 		return new self($value);
 	}
 
+	/**
+	 * @psalm-pure
+	 */
 	public static function fromFloat(float $value): self
 	{
 		return new self((string)$value);
@@ -87,6 +99,9 @@ final class StringType
 		return $list;
 	}
 
+	/**
+	 * @psalm-mutation-free
+	 */
 	public function castToFloat(): float
 	{
 		$floatValue = (float) $this->value;
@@ -98,6 +113,9 @@ final class StringType
 		throw new RuntimeException('Cannot cast to float: casting will lose information.');
 	}
 
+	/**
+	 * @psalm-mutation-free
+	 */
 	public function castToInt(): int
 	{
 		$intValue = (int) $this->value;
@@ -114,11 +132,17 @@ final class StringType
 		return $this->value;
 	}
 
+	/**
+	 * @psalm-mutation-free
+	 */
 	public function equals(self $other): bool
 	{
 		return $this->value === $other->value;
 	}
 
+	/**
+	 * @psalm-mutation-free
+	 */
 	public function equivalentTo(self $other): bool
 	{
 		return strcasecmp($this->value, $other->value) === 0;
