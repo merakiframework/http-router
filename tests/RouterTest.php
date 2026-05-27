@@ -355,6 +355,22 @@ final class RouterTest extends TestCase
 	}
 
 	#[Test()]
+	public function trailing_slash_is_stripped_before_matching(): void
+	{
+		$expectedMethod = 'get';
+		$expectedRequestTarget = '/contacts/';
+		$sut = $this->createRouterWithDefaultConfig();
+
+		$result = $sut->route($expectedMethod, $expectedRequestTarget);
+
+		$this->assertResult($result)
+			->hasStatusOf(200)
+			->hasRouteThat()
+			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . 'Contacts\\GetAllAction')
+			->hasNoArguments();
+	}
+
+	#[Test()]
 	public function returns_bad_request_when_url_is_missing_required_segment_for_handler_signature(): void
 	{
 		$expectedMethod = 'get';
