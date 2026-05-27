@@ -23,7 +23,7 @@ final class Router
 	/**
 	 * @var string[]
 	 */
-	private array $supportedMethods = ['get', 'head', 'post', 'put', 'delete', 'connect', 'options', 'trace', 'patch'];
+	private array $supportedMethods = ['get', 'head', 'post', 'put', 'delete', 'options', 'patch'];
 
 	/**
 	 * @psalm-readonly
@@ -93,7 +93,8 @@ final class Router
 			$this->ns .= $nsSegment;
 			$this->requestHandler = $this->ns . '\\' . $className;
 			switch (true) {
-				case class_exists($this->requestHandler):
+				case in_array($this->method, $this->supportedMethods, true)
+					&& class_exists($this->requestHandler):
 					$this->previouslyMatchedUrlSegment = $this->urlSegmentToMatch;
 
 					if ($hasNextSegment && $this->hasMoreSpecificRoute()) {

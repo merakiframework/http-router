@@ -276,6 +276,61 @@ final class RouterTest extends TestCase
 	}
 
 	#[Test()]
+	#[DataProvider('writeMethodsAndHandlers')]
+	public function routes_to_handler_for_write_http_methods(
+		string $expectedMethod,
+		string $expectedRequestTarget,
+		string $expectedClass,
+		array $expectedArgs
+	): void {
+		$sut = $this->createRouterWithDefaultConfig();
+
+		$result = $sut->route($expectedMethod, $expectedRequestTarget);
+
+		$this->assertResult($result)
+			->hasStatusOf(200)
+			->usedMethodForMatch($expectedMethod)
+			->usedRequestTargetForMatch($expectedRequestTarget)
+			->hasRouteThat()
+			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . $expectedClass)
+			->hasArguments($expectedArgs);
+	}
+
+	public static function writeMethodsAndHandlers(): array
+	{
+		return [
+			'POST /contact/daniel' => ['post', '/contact/daniel', 'Contact\\PostAction', ['daniel']],
+			'PUT /users/1' => ['put', '/users/1', 'Users\\PutOneAction', ['1']],
+			'PATCH /users/1' => ['patch', '/users/1', 'Users\\PatchOneAction', ['1']],
+			'DELETE /users/1' => ['delete', '/users/1', 'Users\\DeleteOneAction', ['1']],
+		];
+	}
+
+	#[Test()]
+	#[DataProvider('unsupportedMethods')]
+	public function returns_method_not_allowed_for_unsupported_http_methods(string $unsupportedMethod): void
+	{
+		$expectedRequestTarget = '/contacts';
+		$sut = $this->createRouterWithDefaultConfig();
+
+		$result = $sut->route($unsupportedMethod, $expectedRequestTarget);
+
+		$this->assertResult($result)
+			->hasStatusOf(405)
+			->usedMethodForMatch($unsupportedMethod)
+			->usedRequestTargetForMatch($expectedRequestTarget)
+			->allowsMethods(['get', 'head', 'post']);
+	}
+
+	public static function unsupportedMethods(): array
+	{
+		return [
+			'CONNECT' => ['connect'],
+			'TRACE' => ['trace'],
+		];
+	}
+
+	#[Test()]
 	public function lists_allowed_methods_if_provided_method_could_not_be_matched(
 		string $expectedMethod = 'delete',
 		string $expectedRequestTarget = '/contacts'
