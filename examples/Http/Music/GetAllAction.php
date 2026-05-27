@@ -7,7 +7,7 @@ use Laminas\Diactoros\Response\TextResponse;
 
 final class GetAllAction
 {
-	public function __invoke(string $artist = null, string $album = null)
+	public function __invoke(?string $artist = null, ?string $album = null)
 	{
 		// all songs belonging to artist and in album
 		if ($album) {
