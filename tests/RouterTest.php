@@ -331,6 +331,25 @@ final class RouterTest extends TestCase
 	}
 
 	#[Test()]
+	public function routes_to_handler_for_methods_registered_via_with_additional_methods(): void
+	{
+		$expectedMethod = 'propfind';
+		$expectedRequestTarget = '/contacts';
+		$config = Config::create(self::DEFAULT_TEST_FIXTURES_NAMESPACE)
+			->withAdditionalMethods('propfind');
+		$sut = new Router($config);
+
+		$result = $sut->route($expectedMethod, $expectedRequestTarget);
+
+		$this->assertResult($result)
+			->hasStatusOf(200)
+			->usedMethodForMatch($expectedMethod)
+			->usedRequestTargetForMatch($expectedRequestTarget)
+			->hasRouteThat()
+			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . 'Contacts\\PropfindAllAction');
+	}
+
+	#[Test()]
 	public function options_request_is_auto_synthesised_when_no_options_handler_exists(): void
 	{
 		$expectedMethod = 'options';

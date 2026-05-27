@@ -79,6 +79,17 @@ final class Config
 	 */
 	public string $namespace = '';
 
+	/**
+	 * HTTP methods the router will route to handler classes. Other methods
+	 * receive a 405 Method Not Allowed. Extend this list with
+	 * withAdditionalMethods() to enable WebDAV, PATCH-only APIs, or other
+	 * non-standard verbs.
+	 *
+	 * @psalm-readonly-allow-private-mutation
+	 * @var string[]
+	 */
+	public array $supportedMethods = ['get', 'head', 'post', 'put', 'delete', 'options', 'patch'];
+
 	private function __construct(string $namespace)
 	{
 		$this->setNamespace($namespace);
@@ -248,6 +259,28 @@ final class Config
 	{
 		$cloned = clone $this;
 		$cloned->excludedPluralWords = array_merge([$word], $words);
+
+		return $cloned;
+	}
+
+	/**
+	 * Register additional HTTP methods the router should route to handler
+	 * classes. Useful for WebDAV (PROPFIND, PROPPATCH, MKCOL, COPY, MOVE,
+	 * LOCK, UNLOCK) or other HTTP extensions. Method names are normalised
+	 * to lowercase and deduplicated.
+	 *
+	 * @psalm-external-mutation-free
+	 */
+	public function withAdditionalMethods(string $method, string ...$methods): self
+	{
+		$cloned = clone $this;
+
+		foreach ([$method, ...$methods] as $m) {
+			$lower = strtolower($m);
+			if (!in_array($lower, $cloned->supportedMethods, true)) {
+				$cloned->supportedMethods[] = $lower;
+			}
+		}
 
 		return $cloned;
 	}

@@ -21,11 +21,6 @@ use RuntimeException;
 final class Router
 {
 	/**
-	 * @var string[]
-	 */
-	private array $supportedMethods = ['get', 'head', 'post', 'put', 'delete', 'options', 'patch'];
-
-	/**
 	 * @psalm-readonly
 	 */
 	public Config $config;
@@ -93,7 +88,7 @@ final class Router
 			$this->ns .= $nsSegment;
 			$this->requestHandler = $this->ns . '\\' . $className;
 			switch (true) {
-				case in_array($this->method, $this->supportedMethods, true)
+				case in_array($this->method, $this->config->supportedMethods, true)
 					&& class_exists($this->requestHandler):
 					$this->previouslyMatchedUrlSegment = $this->urlSegmentToMatch;
 
@@ -162,7 +157,7 @@ final class Router
 	{
 		$namespace = str_replace($className, '', $this->requestHandler);
 
-		foreach ($this->supportedMethods as $method) {
+		foreach ($this->config->supportedMethods as $method) {
 			// no need to check again, we already no it isn't allowed
 			if ($method === $this->method) {
 				continue;
