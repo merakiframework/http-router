@@ -137,6 +137,12 @@ final class Router
 
 		/** @psalm-suppress TypeDoesNotContainType */
 		if ($this->allowedMethods !== []) {
+			// Auto-synthesise an OPTIONS response listing the methods supported
+			// at this URL (RFC 9110 §9.3.7) when no OptionsAction handler exists.
+			if ($this->originalMethod === 'options') {
+				return $this->optionsResponse();
+			}
+
 			return $this->methodNotAllowed();
 		}
 
@@ -177,6 +183,13 @@ final class Router
 		// if a 'GET' request is supported, so too is a 'HEAD' request
 		if (in_array('get', $this->allowedMethods) && !in_array('head', $this->allowedMethods)) {
 			$this->allowedMethods[] = 'head';
+		}
+
+		// OPTIONS is always available wherever any other method is — the
+		// router auto-synthesises an OPTIONS response listing allowed methods
+		// when no OptionsAction handler is defined.
+		if (!empty($this->allowedMethods) && !in_array('options', $this->allowedMethods, true)) {
+			$this->allowedMethods[] = 'options';
 		}
 	}
 
@@ -327,6 +340,17 @@ final class Router
 		return Result::notFound(
 			$this->originalMethod,
 			(string)$this->requestTarget,
+			$this->requestHandler,
+			$this->matches
+		);
+	}
+
+	private function optionsResponse(): Result
+	{
+		return Result::optionsResponse(
+			$this->originalMethod,
+			(string)$this->requestTarget,
+			$this->allowedMethods,
 			$this->requestHandler,
 			$this->matches
 		);

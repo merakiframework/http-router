@@ -82,6 +82,28 @@ final class Result
 	}
 
 	/**
+	 * Auto-synthesised response for OPTIONS requests when no OptionsAction
+	 * handler is defined. Status 204 (No Content); the list of methods
+	 * supported at this URL is provided via $allowedMethods.
+	 *
+	 * @param string[] $allowedMethods
+	 * @param Route[] $closestMatches
+	 */
+	public static function optionsResponse(
+		string $method,
+		string $requestTarget,
+		array $allowedMethods,
+		string $handlerThatMatchesRequest,
+		array $closestMatches
+	): self {
+		$self = new self(204, $method, $requestTarget);
+		$self->allowedMethods = $allowedMethods;
+		$self->handlerThatMatchesRequest = $handlerThatMatchesRequest;
+		$self->closestMatches = $closestMatches;
+		return $self;
+	}
+
+	/**
 	 * @param string[] $allowedMethods
 	 * @param Route[] $closestMatches
 	 */

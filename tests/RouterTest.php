@@ -43,7 +43,7 @@ final class RouterTest extends TestCase
 
 		$this->assertResult($result)
 			->hasStatusOf(405)
-			->allowsMethods(['get', 'head']);
+			->allowsMethods(['get', 'head', 'options']);
 	}
 
 	#[Test()]
@@ -57,7 +57,7 @@ final class RouterTest extends TestCase
 
 		$this->assertResult($result)
 			->hasStatusOf(405)
-			->allowsMethods(['post']);
+			->allowsMethods(['post', 'options']);
 	}
 
 	#[Test()]
@@ -319,7 +319,7 @@ final class RouterTest extends TestCase
 			->hasStatusOf(405)
 			->usedMethodForMatch($unsupportedMethod)
 			->usedRequestTargetForMatch($expectedRequestTarget)
-			->allowsMethods(['get', 'head', 'post']);
+			->allowsMethods(['get', 'head', 'post', 'options']);
 	}
 
 	public static function unsupportedMethods(): array
@@ -328,6 +328,35 @@ final class RouterTest extends TestCase
 			'CONNECT' => ['connect'],
 			'TRACE' => ['trace'],
 		];
+	}
+
+	#[Test()]
+	public function options_request_is_auto_synthesised_when_no_options_handler_exists(): void
+	{
+		$expectedMethod = 'options';
+		$expectedRequestTarget = '/contacts';
+		$sut = $this->createRouterWithDefaultConfig();
+
+		$result = $sut->route($expectedMethod, $expectedRequestTarget);
+
+		$this->assertResult($result)
+			->hasStatusOf(204)
+			->usedMethodForMatch($expectedMethod)
+			->usedRequestTargetForMatch($expectedRequestTarget)
+			->allowsMethods(['get', 'head', 'post', 'options']);
+	}
+
+	#[Test()]
+	public function options_request_returns_not_found_when_url_has_no_handlers_at_all(): void
+	{
+		$expectedMethod = 'options';
+		$expectedRequestTarget = '/no-such-resource';
+		$sut = $this->createRouterWithDefaultConfig();
+
+		$result = $sut->route($expectedMethod, $expectedRequestTarget);
+
+		$this->assertResult($result)
+			->hasStatusOf(404);
 	}
 
 	#[Test()]
@@ -343,7 +372,7 @@ final class RouterTest extends TestCase
 			->hasStatusOf(405)
 			->usedMethodForMatch($expectedMethod)
 			->usedRequestTargetForMatch($expectedRequestTarget)
-			->allowsMethods(['head', 'get', 'post']);
+			->allowsMethods(['head', 'get', 'post', 'options']);
 	}
 
 	public function routesWithDifferentMethods(): array
