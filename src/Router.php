@@ -54,6 +54,7 @@ final class Router
 	private array $allowedMethods = [];
 	private string $previouslyMatchedUrlSegment = '';
 	private string $urlSegmentToMatch = '';
+	private bool $missingRequiredSegment = false;
 
 	public function __construct(string|Config $config)
 	{
@@ -76,6 +77,7 @@ final class Router
 		$this->ns = $this->config->namespace;
 		$this->matches = [];
 		$this->allowedMethods = [];
+		$this->missingRequiredSegment = false;
 
 		while (!$this->segments->isEmpty()) {
 			$this->urlSegmentToMatch = $this->segments->pop() ?? '';
@@ -123,6 +125,10 @@ final class Router
 		}
 
 		// var_dump($this->segmentMatches);
+
+		if ($this->missingRequiredSegment) {
+			return $this->badRequest();
+		}
 
 		if (!empty($this->matches) && $this->segments->isEmpty()) {
 			return $this->found();
@@ -210,24 +216,42 @@ final class Router
 
 		$all = $route->parameters->allExceptVariadic();
 
+		$requiredCount = count($route->parameters->required);
+
 		for ($i = $requiredParamIndexStart, $l = count($all); $i < $l; $i++) {
 			$param = $all[$i];
 			$segmentToMatchParam = $this->segments->pop();
 
-			// all required params have been matched to segments
+			// URL ran out of segments before the route's required params were satisfied.
+			// The handler exists but the URL is too short for its signature.
 			if ($segmentToMatchParam === null) {
+				if ($i < $requiredCount) {
+					$this->missingRequiredSegment = true;
+					return;
+				}
 				break;
 			}
+
+			$argMatched = false;
 
 			foreach ($param->types as $type) {
 				try {
 					/** @psalm-suppress MixedAssignment */
 					$castedValue = StringType::fromString($segmentToMatchParam)->castTo($type);
 					$route = $route->addArgument($castedValue);
+					$argMatched = true;
 					break; // move on to next argument
 				} catch (RuntimeException $e) {
 					continue; // try next type
 				}
+			}
+
+			// URL segment was provided but no parameter type can accept it;
+			// the route's signature doesn't match this URL. Push the segment back
+			// so the outer loop can fall through to a notFound result.
+			if (!$argMatched) {
+				$this->segments->push($segmentToMatchParam);
+				return;
 			}
 		}
 
@@ -300,6 +324,16 @@ final class Router
 	private function notFound(): Result
 	{
 		return Result::notFound(
+			$this->originalMethod,
+			(string)$this->requestTarget,
+			$this->requestHandler,
+			$this->matches
+		);
+	}
+
+	private function badRequest(): Result
+	{
+		return Result::badRequest(
 			$this->originalMethod,
 			(string)$this->requestTarget,
 			$this->requestHandler,

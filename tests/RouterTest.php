@@ -64,7 +64,7 @@ final class RouterTest extends TestCase
 	public function get_handler_is_returned_if_head_handler_doesnt_exist(): void
 	{
 		$expectedMethod = 'head';
-		$expectedRequestTarget = '/contact';
+		$expectedRequestTarget = '/contacts';
 		$sut = $this->createRouterWithDefaultConfig();
 
 		$result = $sut->route($expectedMethod, $expectedRequestTarget);
@@ -75,7 +75,7 @@ final class RouterTest extends TestCase
 			->usedRequestTargetForMatch($expectedRequestTarget)
 			->hasNoClosestMatches()
 			->hasRouteThat()
-			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . 'Contact\\GetAction')
+			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . 'Contacts\\GetAllAction')
 			->hasInvokeMethodOf($sut->config->invokeMethod)
 			->hasNoArguments();
 	}
@@ -352,6 +352,34 @@ final class RouterTest extends TestCase
 			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . $expectedClass)
 			->hasInvokeMethodOf($sut->config->invokeMethod)
 			->hasArguments([404, 405]);
+	}
+
+	#[Test()]
+	public function returns_bad_request_when_url_is_missing_required_segment_for_handler_signature(): void
+	{
+		$expectedMethod = 'get';
+		$expectedRequestTarget = '/contact';
+		$sut = $this->createRouterWithDefaultConfig();
+
+		$result = $sut->route($expectedMethod, $expectedRequestTarget);
+
+		$this->assertResult($result)
+			->hasStatusOf(400);
+	}
+
+	#[Test()]
+	public function returns_not_found_when_url_segment_cannot_be_cast_to_any_parameter_type(): void
+	{
+		$expectedMethod = 'get';
+		$expectedRequestTarget = '/archives/2026/not-a-number';
+		$config = Config::create(self::DEFAULT_TEST_FIXTURES_NAMESPACE)
+			->excludePluralWords('archives', 'music');
+		$sut = new Router($config);
+
+		$result = $sut->route($expectedMethod, $expectedRequestTarget);
+
+		$this->assertResult($result)
+			->hasStatusOf(404);
 	}
 
 	#[Test()]
