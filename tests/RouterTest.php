@@ -9,11 +9,12 @@ use Meraki\Http\Router\Config;
 use Meraki\Http\AssertionBuilder\Result as ResultBuilder;
 use Meraki\Http\Router\Exception\SignatureMismatch;
 use Meraki\Http\Router\Exception\UnallowedVariadicParameter;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers Router::
- */
+#[CoversClass(Router::class)]
 final class RouterTest extends TestCase
 {
 	/**
@@ -21,9 +22,7 @@ final class RouterTest extends TestCase
 	 */
 	private const DEFAULT_TEST_FIXTURES_NAMESPACE = 'Project\\Http\\';
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function default_config_is_created_with_correct_namespace(): void
 	{
 		$sut = $this->createRouterWithDefaultConfig();
@@ -33,9 +32,7 @@ final class RouterTest extends TestCase
 		$this->assertEquals('Project\\Http', $actualNamespace);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function adds_head_method_to_allowed_methods_if_get_is_available_but_head_is_not(): void
 	{
 		$expectedMethod = 'post';
@@ -49,9 +46,7 @@ final class RouterTest extends TestCase
 			->allowsMethods(['get', 'head']);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function does_not_add_head_to_allowed_methods_if_get_is_not_allowed_either(): void
 	{
 		$expectedMethod = 'get';
@@ -65,9 +60,7 @@ final class RouterTest extends TestCase
 			->allowsMethods(['post']);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function get_handler_is_returned_if_head_handler_doesnt_exist(): void
 	{
 		$expectedMethod = 'head';
@@ -87,10 +80,8 @@ final class RouterTest extends TestCase
 			->hasNoArguments();
 	}
 
-	/**
-	 * @test
-	 * @dataProvider rootPathMappings
-	 */
+	#[Test()]
+	#[DataProvider('rootPathMappings')]
 	public function root_path_routes_to_correct_handler(string $expectedMethod, string $expectedRequestTarget, string $expectedRequestHandler): void
 	{
 		$sut = $this->createRouterWithDefaultConfig();
@@ -105,7 +96,7 @@ final class RouterTest extends TestCase
 			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . $expectedRequestHandler);
 	}
 
-	public function rootPathMappings(): array
+	public static function rootPathMappings(): array
 	{
 		// "Home" is the default subnamespace
 		return [
@@ -114,10 +105,8 @@ final class RouterTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 * @dataProvider notDefinedNamespaceSegments
-	 */
+	#[Test()]
+	#[DataProvider('notDefinedNamespaceSegments')]
 	public function route_not_found_if_namespace_segment_not_exists(
 		string $expectedMethod,
 		string $expectedRequestTarget,
@@ -136,7 +125,7 @@ final class RouterTest extends TestCase
 			->hasClosestMatchesOf($expectedClosestMatches);
 	}
 
-	public function notDefinedNamespaceSegments(): array
+	public static function notDefinedNamespaceSegments(): array
 	{
 		return [
 			'/action' => ['get', '/test', 'Test\\GetAction'],
@@ -151,10 +140,8 @@ final class RouterTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 * @dataProvider definedRequestTargetsWithoutParams
-	 */
+	#[Test()]
+	#[DataProvider('definedRequestTargetsWithoutParams')]
 	public function request_target_is_found_without_params(
 		string $expectedMethod,
 		string $expectedRequestTarget,
@@ -175,7 +162,7 @@ final class RouterTest extends TestCase
 			->hasNoArguments();
 	}
 
-	public function definedRequestTargetsWithoutParams()
+	public static function definedRequestTargetsWithoutParams(): array
 	{
 		return [
 			'/resources, get method' => ['get', '/contacts', 'Contacts\\GetAllAction'],
@@ -183,10 +170,8 @@ final class RouterTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 * @dataProvider definedRequestTargetsWithParamsForExcludedPluralWord
-	 */
+	#[Test()]
+	#[DataProvider('definedRequestTargetsWithParamsForExcludedPluralWord')]
 	public function request_target_is_found_with_excluded_plural_word_and_params(
 		string $expectedRequestTarget,
 		string $expectedClass,
@@ -210,7 +195,7 @@ final class RouterTest extends TestCase
 			->hasArguments($expectedArgs);
 	}
 
-	public function definedRequestTargetsWithParamsForExcludedPluralWord(): array
+	public static function definedRequestTargetsWithParamsForExcludedPluralWord(): array
 	{
 		return [
 			'/resources' => [
@@ -246,10 +231,8 @@ final class RouterTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 * @dataProvider definedRequestTargetsWithParams
-	 */
+	#[Test()]
+	#[DataProvider('definedRequestTargetsWithParams')]
 	public function request_target_is_found_with_params(
 		string $expectedRequestTarget,
 		string $expectedClass,
@@ -271,7 +254,7 @@ final class RouterTest extends TestCase
 			->hasArguments($expectedArgs);
 	}
 
-	public function definedRequestTargetsWithParams(): array
+	public static function definedRequestTargetsWithParams(): array
 	{
 		return [
 			'/action/<string>' => [
@@ -287,9 +270,7 @@ final class RouterTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function lists_allowed_methods_if_provided_method_could_not_be_matched(
 		string $expectedMethod = 'delete',
 		string $expectedRequestTarget = '/contacts'
@@ -312,9 +293,7 @@ final class RouterTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function can_match_deeply_nested_trailing_segments_as_variadic_params(): void
 	{
 		$expectedMethod = 'get';
@@ -337,9 +316,7 @@ final class RouterTest extends TestCase
 			->hasArguments(['qld', 'emerald', 'cleaning', 'pest-control']);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function throws_error_if_parent_route_tries_accepting_trailing_url_segments(): void
 	{
 		$expectedMethod = 'get';
@@ -351,9 +328,7 @@ final class RouterTest extends TestCase
 		$result = $sut->route($expectedMethod, $expectedRequestTarget);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function does_not_throw_error_if_trailing_url_segments_in_single_level_route(): void
 	{
 		$expectedMethod = 'get';
@@ -374,9 +349,7 @@ final class RouterTest extends TestCase
 			->hasArguments([404, 405]);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function throws_error_if_param_from_parent_route_is_missing_from_child_route(): void
 	{
 		$parentRoute = new Route('Project\\Http\\MissingParameter\\GetAction', '__invoke');

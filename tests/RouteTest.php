@@ -4,19 +4,17 @@ declare(strict_types=1);
 namespace Meraki\Http;
 
 use Meraki\Http\Route;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers Route::
- */
+#[CoversClass(Route::class)]
 final class RouteTest extends TestCase
 {
 	private const REQUEST_HANDLER = 'Project\\Http\\Archives\\GetAllAction';
 	private const INVOKE_METHOD = '__invoke';
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function request_handler_is_set(): void
 	{
 		$sut = $this->createRoute();
@@ -24,9 +22,7 @@ final class RouteTest extends TestCase
 		$this->assertEquals(self::REQUEST_HANDLER, $sut->requestHandler);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function invoke_method_is_set(): void
 	{
 		$sut = $this->createRoute();
@@ -39,9 +35,7 @@ final class RouteTest extends TestCase
 		$sut = $this->createRoute();
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function has_no_arguments_when_created(): void
 	{
 		$sut = $this->createRoute();

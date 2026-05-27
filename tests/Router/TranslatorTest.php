@@ -5,19 +5,18 @@ namespace Meraki\Http\Router;
 
 use Meraki\Http\Router\Config;
 use Meraki\Http\Router\Translator;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers Translator::
- */
+#[CoversClass(Translator::class)]
 final class TranslatorTest extends TestCase
 {
 	private const REQUEST_HANDLERS_NAMESPACE = 'Project\\Http';
 
-	/**
-	 * @test
-	 * @dataProvider noParentResourceOrChildSegments
-	 */
+	#[Test()]
+	#[DataProvider('noParentResourceOrChildSegments')]
 	public function can_translate_with_no_next_segment_and_no_parent_resource(
 		string $expectedChildResource,
 		string $expectedClass
@@ -29,7 +28,7 @@ final class TranslatorTest extends TestCase
 		$this->assertEquals($expectedClass, $result);
 	}
 
-	public function noParentResourceOrChildSegments(): array
+	public static function noParentResourceOrChildSegments(): array
 	{
 		return [
 			'/' => ['', 'GetAction'],
@@ -40,10 +39,8 @@ final class TranslatorTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 * @dataProvider noChildSegmentsButParentResource
-	 */
+	#[Test()]
+	#[DataProvider('noChildSegmentsButParentResource')]
 	public function can_translate_with_no_next_segment_and_parent_resource(
 		string $expectedParentResource,
 		string $expectedChildResource,
@@ -56,7 +53,7 @@ final class TranslatorTest extends TestCase
 		$this->assertEquals($expectedClass, $result);
 	}
 
-	public function noChildSegmentsButParentResource(): array
+	public static function noChildSegmentsButParentResource(): array
 	{
 		return [
 			'/ping/123/profile' => ['ping', 'profile', 'GetAction'],
@@ -71,10 +68,8 @@ final class TranslatorTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 * @dataProvider noParentResourceButChildSegments
-	 */
+	#[Test()]
+	#[DataProvider('noParentResourceButChildSegments')]
 	public function can_translate_with_next_segment_and_no_parent_resource(
 		string $expectedChildResource,
 		string $expectedClass
@@ -86,7 +81,7 @@ final class TranslatorTest extends TestCase
 		$this->assertEquals($expectedClass, $result);
 	}
 
-	public function noParentResourceButChildSegments(): array
+	public static function noParentResourceButChildSegments(): array
 	{
 		return [
 			'/archives/<2022>/<12>/<21>' => ['', 'GetAction'],
@@ -97,10 +92,8 @@ final class TranslatorTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 * @dataProvider parentResourceAndChildSegments
-	 */
+	#[Test()]
+	#[DataProvider('parentResourceAndChildSegments')]
 	public function can_translate_with_next_segment_and_parent_resource(
 		string $expectedParentResource,
 		string $expectedChildResource,
@@ -113,7 +106,7 @@ final class TranslatorTest extends TestCase
 		$this->assertEquals($expectedClass, $result);
 	}
 
-	public function parentResourceAndChildSegments(): array
+	public static function parentResourceAndChildSegments(): array
 	{
 		return [
 			'/ping/1/profile/1' => ['ping', 'profile', 'GetAction'],
@@ -130,9 +123,7 @@ final class TranslatorTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function can_exclude_words_from_singular_plural_conversions(): void
 	{
 		$expectedChildResource = 'terms-and-conditions';

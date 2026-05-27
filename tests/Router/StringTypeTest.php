@@ -5,18 +5,17 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Router\StringType;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
-/**
- * @covers StringType::
- */
+#[CoversClass(StringType::class)]
 final class StringTypeTest extends TestCase
 {
-	/**
-	 * @test
-	 * @dataProvider validFloatsAlreadyNormalised
-	 */
+	#[Test()]
+	#[DataProvider('validFloatsAlreadyNormalised')]
 	public function can_convert_floats_if_value_is_a_float(string $value): void
 	{
 		$str = StringType::fromString($value);
@@ -27,7 +26,7 @@ final class StringTypeTest extends TestCase
 		$this->assertTrue($str->equals(StringType::fromFloat($castedValue)));
 	}
 
-	public function validFloatsAlreadyNormalised(): array
+	public static function validFloatsAlreadyNormalised(): array
 	{
 		return [
 			['3.14159'],
@@ -42,7 +41,7 @@ final class StringTypeTest extends TestCase
 		];
 	}
 
-	public function validFloatsNotNormalised(): array
+	public static function validFloatsNotNormalised(): array
 	{
 		return [
 			['-8000'],
@@ -60,10 +59,8 @@ final class StringTypeTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 * @dataProvider invalidFloats
-	 */
+	#[Test()]
+	#[DataProvider('invalidFloats')]
 	public function returns_null_if_value_is_not_a_float(string $value): void
 	{
 		$exception = new \RuntimeException('Cannot cast to float: casting will lose information.');
@@ -74,7 +71,7 @@ final class StringTypeTest extends TestCase
 		$castedValue = $str->castTo('float');
 	}
 
-	public function invalidFloats(): array
+	public static function invalidFloats(): array
 	{
 		return [
 			['e2'],
@@ -96,10 +93,8 @@ final class StringTypeTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 * @dataProvider validArrays
-	 */
+	#[Test()]
+	#[DataProvider('validArrays')]
 	public function can_convert_to_array_if_value_is_array_like(string $value, array $expected): void
 	{
 		$str = StringType::fromString($value);
@@ -110,7 +105,7 @@ final class StringTypeTest extends TestCase
 		$this->assertEquals($expected, $castedValue);
 	}
 
-	public function validArrays(): array
+	public static function validArrays(): array
 	{
 		return [
 			'integers list' => ['1,2,3', [1,2,3]],
@@ -119,10 +114,8 @@ final class StringTypeTest extends TestCase
 		];
 	}
 
-	/**
-	 * @test
-	 * @dataProvider invalidArrays
-	 */
+	#[Test()]
+	#[DataProvider('invalidArrays')]
 	public function throws_exception_if_value_cannot_be_cast_to_array(string $value, string $message): void
 	{
 		$exception = new RuntimeException($message);
@@ -133,7 +126,7 @@ final class StringTypeTest extends TestCase
 		$castedValue = $str->castTo('array');
 	}
 
-	public function invalidArrays(): array
+	public static function invalidArrays(): array
 	{
 		$missingElementMessage = 'Cannot cast to array: missing element in list';
 

@@ -5,19 +5,17 @@ namespace Meraki\Http\Router;
 
 use Meraki\Http\Router\Config;
 use Meraki\Http\Router\Exception\InvalidArgument;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
-/**
- * @covers Config::
- */
+#[CoversClass(Config::class)]
 final class ConfigTest extends TestCase
 {
 	private const REQUEST_HANDLERS_NAMESPACE = 'Project\\Http';
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function it_exists(): void
 	{
 		$sut = Config::class;
@@ -27,9 +25,7 @@ final class ConfigTest extends TestCase
 		$this->assertTrue($exists);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function namespace_is_set(): void
 	{
 		$expectedNamespace = self::REQUEST_HANDLERS_NAMESPACE;
@@ -40,9 +36,7 @@ final class ConfigTest extends TestCase
 		$this->assertEquals($expectedNamespace, $actualNamespace);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function throws_error_if_namespace_is_empty(): void
 	{
 		$this->expectExceptionObject(InvalidArgument::namespaceValueIsMissing());
@@ -50,9 +44,7 @@ final class ConfigTest extends TestCase
 		$sut = Config::create('');
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function throws_error_if_trying_to_set_namespace_to_global_scope(): void
 	{
 		$this->expectExceptionObject(InvalidArgument::namespaceCannotBeInGlobalScope());
@@ -60,9 +52,7 @@ final class ConfigTest extends TestCase
 		$sut = Config::create('\\');
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function slashes_are_removed_from_beginning_of_namespace(): void
 	{
 		$expectedNamespace = self::REQUEST_HANDLERS_NAMESPACE;
@@ -73,9 +63,7 @@ final class ConfigTest extends TestCase
 		$this->assertEquals($expectedNamespace, $actualNamespace);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function slashes_are_removed_from_end_of_namespace(): void
 	{
 		$expectedNamespace = self::REQUEST_HANDLERS_NAMESPACE;
@@ -86,19 +74,15 @@ final class ConfigTest extends TestCase
 		$this->assertEquals($expectedNamespace, $actualNamespace);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function can_only_use_named_constructors(): void
 	{
-		$this->expectError();
+		$this->expectException(\Error::class);
 
 		$sut = new Config(self::REQUEST_HANDLERS_NAMESPACE);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function has_a_default_invoke_method(): void
 	{
 		$sut = $this->createConfig();
@@ -106,9 +90,7 @@ final class ConfigTest extends TestCase
 		$this->assertEquals('__invoke', $sut->invokeMethod);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function has_a_default_logger(): void
 	{
 		$sut = $this->createConfig();
@@ -116,9 +98,7 @@ final class ConfigTest extends TestCase
 		$this->assertInstanceOf(NullLogger::class, $sut->logger);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function has_a_default_prefix(): void
 	{
 		$sut = $this->createConfig();
@@ -126,9 +106,7 @@ final class ConfigTest extends TestCase
 		$this->assertEquals('', $sut->prefix);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function has_a_default_suffix(): void
 	{
 		$sut = $this->createConfig();
@@ -136,9 +114,7 @@ final class ConfigTest extends TestCase
 		$this->assertEquals('Action', $sut->suffix);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function has_a_default_plural_indicator_suffix(): void
 	{
 		$sut = $this->createConfig();
@@ -146,9 +122,7 @@ final class ConfigTest extends TestCase
 		$this->assertEquals('All', $sut->pluralIndicator);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function has_a_default_singular_indicator_suffix(): void
 	{
 		$sut = $this->createConfig();
@@ -156,9 +130,7 @@ final class ConfigTest extends TestCase
 		$this->assertEquals('One', $sut->singularIndicator);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function no_plural_words_are_excluded_from_conversion_by_default(): void
 	{
 		$sut = $this->createConfig();
@@ -166,9 +138,7 @@ final class ConfigTest extends TestCase
 		$this->assertEmpty($sut->excludedPluralWords);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function no_singular_words_are_excluded_from_conversion_by_default(): void
 	{
 		$sut = $this->createConfig();
@@ -176,9 +146,7 @@ final class ConfigTest extends TestCase
 		$this->assertEmpty($sut->excludedSingularWords);
 	}
 
-	/**
-	 * @test
-	 */
+	#[Test()]
 	public function has_a_default_sub_namespace_for_the_root_path_of_a_url(): void
 	{
 		$sut = $this->createConfig();
