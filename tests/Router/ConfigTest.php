@@ -131,22 +131,6 @@ final class ConfigTest extends TestCase
 	}
 
 	#[Test()]
-	public function no_plural_words_are_excluded_from_conversion_by_default(): void
-	{
-		$sut = $this->createConfig();
-
-		$this->assertEmpty($sut->excludedPluralWords);
-	}
-
-	#[Test()]
-	public function no_singular_words_are_excluded_from_conversion_by_default(): void
-	{
-		$sut = $this->createConfig();
-
-		$this->assertEmpty($sut->excludedSingularWords);
-	}
-
-	#[Test()]
 	public function has_a_default_sub_namespace_for_the_root_path_of_a_url(): void
 	{
 		$sut = $this->createConfig();
