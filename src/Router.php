@@ -6,6 +6,10 @@ namespace Meraki\Http;
 use Meraki\Http\Router\Result;
 use Meraki\Http\Router\Config;
 use Meraki\Http\Router\StringType;
+use Meraki\Http\Router\Level;
+use Meraki\Http\Router\MatchOutcome;
+use Meraki\Http\Router\MatchFailure;
+use Meraki\Http\Router\PickedAction;
 use Meraki\Http\Router\Exception\UnallowedVariadicParameter;
 use Meraki\Http\Router\Exception\SignatureMismatch;
 use RuntimeException;
@@ -49,107 +53,84 @@ final class Router
 
 	public function route(string $method, string $requestTarget): Result
 	{
-		$originalMethod = strtolower($method);
+		$method = strtolower($method);
 		$target = new RequestTarget($requestTarget);
-		$segments = $target->getSegments();
 
-		// An empty path targets the root resource (rootPathSubNamespace, e.g.
-		// \Home). getSegments() returns [] for "/" and "", so re-introduce the
-		// empty segment the root lookup keys off of.
-		if ($segments === []) {
-			$segments = [''];
+		// An empty path ("/" or "") targets the root resource. getSegments()
+		// returns [] for those, so re-introduce the empty segment the root
+		// lookup keys off of (namespaceSegmentFor('') -> rootPathSubNamespace).
+		$segments = $target->getSegments() ?: [''];
+
+		// Methods not in the supported list (CONNECT, TRACE, made-up verbs)
+		// never match a handler: 405 if the URL has handlers, else 404.
+		if (!in_array($method, $this->config->supportedMethods, true)) {
+			return $this->respondMethodNotSupported($method, $target, $segments);
 		}
 
-		// Method not in supported list (CONNECT, TRACE, made-up methods)
-		// always returns 405 (or 404 if the URL has no handlers at all).
-		if (!in_array($originalMethod, $this->config->supportedMethods, true)) {
-			return $this->respondMethodNotSupported($originalMethod, $target, $segments);
+		$outcome = $this->tryMatch($segments, $method);
+
+		// HEAD falls back to GET only on a clean no-match (not on 400/422).
+		if ($method === 'head' && $outcome->failure === MatchFailure::NoMatch) {
+			$outcome = $this->tryMatch($segments, 'get');
 		}
 
-		$matchResult = $this->tryMatch($segments, $originalMethod);
-
-		// HEAD falls back to GET when no HeadAction is defined.
-		if ($matchResult['matches'] === null
-			&& $originalMethod === 'head'
-			&& $matchResult['missingRequired'] === false
-			&& $matchResult['castFailure'] === false) {
-			$matchResult = $this->tryMatch($segments, 'get');
-		}
-
-		if ($matchResult['matches'] !== null && $matchResult['matches'] !== []) {
-			$matches = $matchResult['matches'];
+		if ($outcome->isMatch()) {
+			$matches = $outcome->matches;
 			$primary = array_pop($matches);
-			return Result::found(
-				$originalMethod,
-				(string)$target,
-				$primary,
-				$matches
-			);
+			assert($primary !== null); // isMatch() guarantees a non-empty chain
+			return Result::found($method, (string)$target, $primary, $matches);
 		}
 
-		if ($matchResult['missingRequired']) {
-			return Result::badRequest(
-				$originalMethod,
-				(string)$target,
-				$matchResult['lastHandler'] ?? '',
-				[]
-			);
-		}
+		// isMatch() is false here, so the outcome carries a failure reason.
+		$failure = $outcome->failure;
+		assert($failure !== null);
 
-		if ($matchResult['castFailure']) {
-			return Result::unprocessableContent(
-				$originalMethod,
-				(string)$target,
-				$matchResult['lastHandler'] ?? '',
-				[]
-			);
-		}
-
-		// 404 vs 405 vs 204 (OPTIONS auto-synthesis)
-		$allowed = $this->discoverAllowedMethods($segments, $originalMethod);
-		if ($allowed === []) {
-			return Result::notFound(
-				$originalMethod,
-				(string)$target,
-				$matchResult['lastHandler'] ?? '',
-				[]
-			);
-		}
-
-		if ($originalMethod === 'options') {
-			return Result::optionsResponse(
-				$originalMethod,
-				(string)$target,
-				$allowed,
-				$matchResult['lastHandler'] ?? '',
-				[]
-			);
-		}
-
-		return Result::methodNotAllowed(
-			$originalMethod,
-			(string)$target,
-			$allowed,
-			$matchResult['lastHandler'] ?? '',
-			[]
-		);
+		return match ($failure) {
+			MatchFailure::MissingRequiredSegment =>
+				Result::badRequest($method, (string)$target, $outcome->lastHandler, []),
+			MatchFailure::UnprocessableValue =>
+				Result::unprocessableContent($method, (string)$target, $outcome->lastHandler, []),
+			MatchFailure::NoMatch =>
+				$this->resolveNoMatch($method, $target, $segments, $outcome->lastHandler),
+		};
 	}
 
 	/**
-	 * Top-level matching attempt. Returns either a list of matches (route chain)
-	 * or null + diagnostic info indicating why no match was produced.
+	 * Map a clean no-match to the right response: 404 when the URL has no
+	 * handlers for any method, an auto-synthesised 204 for OPTIONS, otherwise
+	 * 405 listing the methods that are available.
 	 *
 	 * @param list<string> $segments
-	 * @return array{matches: Route[]|null, missingRequired: bool, castFailure: bool, lastHandler: string|null}
 	 */
-	private function tryMatch(array $segments, string $method): array
+	private function resolveNoMatch(string $method, RequestTarget $target, array $segments, string $lastHandler): Result
+	{
+		$allowed = $this->discoverAllowedMethods($segments, $method);
+
+		if ($allowed === []) {
+			return Result::notFound($method, (string)$target, $lastHandler, []);
+		}
+
+		if ($method === 'options') {
+			return Result::optionsResponse($method, (string)$target, $allowed, $lastHandler, []);
+		}
+
+		return Result::methodNotAllowed($method, (string)$target, $allowed, $lastHandler, []);
+	}
+
+	/**
+	 * Walk the URL once for a given method, matching a handler at each
+	 * non-pass-through level and threading the inherited parameter chain.
+	 *
+	 * @param list<string> $segments
+	 */
+	private function tryMatch(array $segments, string $method): MatchOutcome
 	{
 		$levels = $this->walkSegments($segments, $method);
 
 		$matches = [];
 		$inheritedParams = [];
 		$inheritedArgs = [];
-		$lastHandler = null;
+		$lastHandler = '';
 
 		// Tracks whether the previous level was matched (vs. pass-through).
 		// Root counts as matched. Item-type classes (GetOneAction) require
@@ -157,6 +138,8 @@ final class Router
 		// ID semantic is being faked from local trailing segments.
 		$parentMatched = true;
 
+		// Level 0 is the bare config namespace (no handler lives there); start
+		// matching from the first real level.
 		for ($i = 1; $i < count($levels); $i++) {
 			$level = $levels[$i];
 			$isTerminal = ($i === count($levels) - 1);
@@ -164,133 +147,125 @@ final class Router
 			// Pass-through: a namespace level with no args that isn't the
 			// terminal level needs no handler matched. Subsequent levels keep
 			// the same inherited params/args.
-			if ($level['args'] === [] && !$isTerminal) {
+			if ($level->args === [] && !$isTerminal) {
 				$parentMatched = false;
 				continue;
 			}
 
-			$candidate = $this->pickActionClass(
-				$level['ns'],
+			$picked = $this->pickActionClass(
+				$level->namespace,
 				$method,
-				$level['args'],
+				$level->args,
 				$inheritedParams,
 				array_values($inheritedArgs),
 				$parentMatched
 			);
 
-			if (!$candidate['matched']) {
-				// No class fits. Distinguish three sub-cases:
-				//   (a) A signature would have fit by arg count but a segment
-				//       couldn't cast -> 422 (URL well-formed, value invalid).
-				//   (b) A signature requires more args than the URL provided
-				//       -> 400 (missing required parameter, URL too short).
-				//   (c) Otherwise -> 404 (no route at this URL).
-				$lastHandler = $this->firstExistingCandidate($level['ns'], $method);
-				$missingRequired = $this->anyExistingCandidateNeedsMoreArgs(
-					$level['ns'],
-					$method,
-					count($inheritedArgs) + count($level['args'])
-				);
-				return [
-					'matches' => null,
-					'missingRequired' => $missingRequired,
-					'castFailure' => $candidate['castFailure'],
-					'lastHandler' => $lastHandler ?? '',
-				];
+			if ($picked->route === null) {
+				// No class fits. Classify why, in priority order:
+				//   castFailed       -> 422 (value present but un-castable)
+				//   needs more args  -> 400 (URL too short for required params)
+				//   otherwise        -> 404 (no route at this URL)
+				$lastHandler = $this->firstExistingCandidate($level->namespace, $method) ?? '';
+
+				if ($picked->castFailed) {
+					return MatchOutcome::failed(MatchFailure::UnprocessableValue, $lastHandler);
+				}
+
+				$totalArgs = count($inheritedArgs) + count($level->args);
+				if ($this->anyExistingCandidateNeedsMoreArgs($level->namespace, $method, $totalArgs)) {
+					return MatchOutcome::failed(MatchFailure::MissingRequiredSegment, $lastHandler);
+				}
+
+				return MatchOutcome::failed(MatchFailure::NoMatch, $lastHandler);
 			}
 
-			$route = $candidate['route'];
-			assert($route !== null);
-			$matches[] = $route;
-			$lastHandler = $route->requestHandler;
+			$matches[] = $picked->route;
+			$lastHandler = $picked->route->requestHandler;
 			$parentMatched = true;
 
-			// Update inherited state for the next level. We absorb only the
-			// params the candidate consumed beyond what it inherited.
-			$inheritedParams = $candidate['paramsConsumed'];
-			$inheritedArgs = $route->arguments;
+			// Inherit the params this level consumed so the next level's
+			// signature must extend them.
+			$inheritedParams = $picked->paramsConsumed;
+			$inheritedArgs = $picked->route->arguments;
 		}
 
 		if ($matches === []) {
-			return [
-				'matches' => null,
-				'missingRequired' => false,
-				'castFailure' => false,
-				'lastHandler' => $lastHandler,
-			];
+			return MatchOutcome::failed(MatchFailure::NoMatch, $lastHandler);
 		}
 
-		return [
-			'matches' => $matches,
-			'missingRequired' => false,
-			'castFailure' => false,
-			'lastHandler' => $lastHandler,
-		];
+		return MatchOutcome::matched($matches, $lastHandler);
 	}
 
 	/**
-	 * Walk URL segments, building a list of (namespace, args) levels.
+	 * Walk URL segments into a list of namespace levels. A segment that extends
+	 * the current namespace (an action class exists there) starts a new level;
+	 * any other segment is consumed as an argument of the current level. Level 0
+	 * is always the bare config namespace.
 	 *
 	 * @param list<string> $segments
-	 * @return non-empty-array<int, array{ns: string, args: list<string>}>
+	 * @return non-empty-list<Level>
 	 */
 	private function walkSegments(array $segments, string $method): array
 	{
-		$levels = [['ns' => $this->config->namespace, 'args' => []]];
+		$levels = [];
+		$currentNs = $this->config->namespace;
+		$currentArgs = [];
 
 		foreach ($segments as $segment) {
-			$currentNs = $levels[count($levels) - 1]['ns'];
-			$nsSegment = $this->namespaceSegmentFor($segment);
-			$candidate = $currentNs . $nsSegment;
+			$candidate = $currentNs . $this->namespaceSegmentFor($segment);
 
 			if ($this->anyActionClassExists($candidate, $method)) {
-				// About to extend the namespace. If the current (parent)
-				// namespace has a handler with variadic parameters, child
-				// routes can't ever be reached — the variadic would always
-				// absorb trailing segments. This is a configuration error in
-				// the user's handler structure; throw to surface it.
-				if ($this->namespaceHasVariadicHandler($currentNs, $method)) {
-					$parentFqcn = $this->firstExistingCandidate($currentNs, $method);
-					$childFqcn = $this->firstExistingCandidate($candidate, $method);
-					assert($parentFqcn !== null);
-					assert($childFqcn !== null);
-					/** @psalm-suppress ArgumentTypeCoercion */
-					throw new UnallowedVariadicParameter(
-						new Route($parentFqcn, $this->config->invokeMethod),
-						new Route($childFqcn, $this->config->invokeMethod)
-					);
-				}
-				$levels[] = ['ns' => $candidate, 'args' => []];
+				$this->guardAgainstVariadicParent($currentNs, $candidate, $method);
+				$levels[] = new Level($currentNs, $currentArgs);
+				$currentNs = $candidate;
+				$currentArgs = [];
 			} else {
-				$levels[count($levels) - 1]['args'][] = $segment;
+				$currentArgs[] = $segment;
 			}
 		}
+
+		$levels[] = new Level($currentNs, $currentArgs);
 
 		return $levels;
 	}
 
 	/**
+	 * Guard against extending past a parent whose handler has a variadic
+	 * parameter: the variadic would always absorb the trailing segments, so any
+	 * child route is permanently unreachable. That's a configuration error in
+	 * the handler tree, so surface it rather than silently routing past it.
+	 */
+	private function guardAgainstVariadicParent(string $parentNs, string $childNs, string $method): void
+	{
+		if (!$this->namespaceHasVariadicHandler($parentNs, $method)) {
+			return;
+		}
+
+		$parentFqcn = $this->firstExistingCandidate($parentNs, $method);
+		$childFqcn = $this->firstExistingCandidate($childNs, $method);
+		assert($parentFqcn !== null);
+		assert($childFqcn !== null);
+
+		throw new UnallowedVariadicParameter(
+			$this->makeRoute($parentFqcn),
+			$this->makeRoute($childFqcn)
+		);
+	}
+
+	/**
 	 * Pick the action class at $ns that best fits the supplied args and the
-	 * inherited param chain. Returns the constructed Route + the param list it
-	 * consumed (for use when computing the next level's inherited params).
+	 * inherited param chain.
 	 *
-	 * $parentMatched is false when the immediately-prior namespace level was a
-	 * pass-through (no args matched). When that's the case, Item types
-	 * (GetOneAction) are excluded — an Item route implies it inherits an ID
-	 * from a real parent context, so a skipped parent invalidates it.
-	 *
-	 * Result shape:
-	 *   ['matched' => true,  'route' => Route, 'paramsConsumed' => list, 'castFailure' => false]  on match
-	 *   ['matched' => false, 'route' => null,  'paramsConsumed' => [],   'castFailure' => true]   when a candidate's
-	 *       signature would have matched except a URL segment couldn't cast to the param's accepted types
-	 *       (422 Unprocessable Content — the route exists, the value is invalid)
-	 *   ['matched' => false, 'route' => null,  'paramsConsumed' => [],   'castFailure' => false]  no candidate fits
-	 *       structurally (404, or 400 via the missing-required check in tryMatch)
+	 * Candidates are tried in priority order (Action -> Collection -> Item):
+	 * the first whose signature absorbs the bound args (inherited + local)
+	 * wins. $parentMatched is false when the immediately-prior namespace level
+	 * was a pass-through; Item/Collection types are then excluded, because they
+	 * imply an inherited parent context a skipped parent can't provide.
 	 *
 	 * @param list<string> $localArgs
 	 * @param list<RouteParameter> $inheritedParams
 	 * @param list<mixed> $inheritedArgs
-	 * @return array{matched: bool, route: ?Route, paramsConsumed: list<RouteParameter>, castFailure: bool}
 	 */
 	private function pickActionClass(
 		string $ns,
@@ -299,7 +274,7 @@ final class Router
 		array $inheritedParams,
 		array $inheritedArgs,
 		bool $parentMatched
-	): array {
+	): PickedAction {
 		// Candidate order: Action -> Collection -> Item. Try the least-implied
 		// semantics first; the first whose signature actually fits the bound
 		// args (inherited + local) wins. This lets `/persons/schema` map to a
@@ -339,94 +314,110 @@ final class Router
 				continue;
 			}
 
-			/** @psalm-suppress ArgumentTypeCoercion */
-			$route = new Route($fqcn, $this->config->invokeMethod);
-			$params = $route->parameters;
+			$route = $this->makeRoute($fqcn);
+			$fit = $this->fitCandidate($route->parameters, $inheritedParams, $inheritedArgs, $localArgs);
 
-			// Parent's params must be a prefix of this class's params (in
-			// position). Bind inherited args first.
-			$allParams = array_values(array_merge($params->required, $params->optional));
-
-			if (count($inheritedParams) > count($allParams)) {
+			if ($fit['castFailed']) {
+				$castFailure = true;
 				continue;
 			}
 
-			// Local-args region of params: everything after the inherited prefix.
-			$localParams = array_slice($allParams, count($inheritedParams));
-			$variadic = $params->variadic;
-
-			$boundArgs = $inheritedArgs;
-			$remaining = $localArgs;
-
-			$argMatchFailed = false;
-			foreach ($localParams as $param) {
-				if ($remaining === []) {
-					if (in_array($param, $params->required, true)) {
-						// Required local param with no arg to fill it.
-						$argMatchFailed = true;
-					}
-					break;
-				}
-				try {
-					/** @psalm-suppress MixedAssignment */
-					$boundArgs[] = $this->castArg(array_shift($remaining), $param->types);
-				} catch (RuntimeException) {
-					$argMatchFailed = true;
-					$castFailure = true;
-					break;
-				}
+			if ($fit['args'] === null) {
+				continue; // signature doesn't fit this URL structurally
 			}
 
-			if ($argMatchFailed) {
-				continue;
-			}
-
-			// Any args left over? They go to variadic, or this class doesn't fit.
-			if ($remaining !== []) {
-				if ($variadic === null) {
-					continue;
-				}
-				foreach ($remaining as $extra) {
-					try {
-						/** @psalm-suppress MixedAssignment */
-						$boundArgs[] = $this->castArg($extra, $variadic->types);
-					} catch (RuntimeException) {
-						$argMatchFailed = true;
-						$castFailure = true;
-						break;
-					}
-				}
-				if ($argMatchFailed) {
-					continue;
-				}
-			}
-
-			$route = $route->withArguments(...$boundArgs)->withType($type);
-
-			return [
-				'matched' => true,
-				'route' => $route,
-				'paramsConsumed' => $allParams,
-				'castFailure' => false,
-			];
+			return PickedAction::matched(
+				$route->withArguments(...$fit['args'])->withType($type),
+				$fit['params']
+			);
 		}
 
 		// No candidate matched. If we excluded a real Item/Collection class
 		// because the parent wasn't addressed, the handler exists but is
 		// unreachable — that's a configuration error.
 		if ($skippedDueToBrokenChain !== null) {
-			/** @psalm-suppress ArgumentTypeCoercion */
 			throw SignatureMismatch::nestedRestfulRouteRequiresAddressedParent(
-				new Route($skippedDueToBrokenChain, $this->config->invokeMethod)
+				$this->makeRoute($skippedDueToBrokenChain)
 			);
 		}
 
-		return [
-			'matched' => false,
-			'route' => null,
-			'paramsConsumed' => [],
-			'castFailure' => $castFailure,
-		];
+		return PickedAction::noMatch($castFailure);
+	}
+
+	/**
+	 * Try to bind the inherited + local args to a candidate's signature.
+	 *
+	 * The candidate's parameters must begin with the inherited param chain
+	 * (by position); the remaining local args fill the rest, with any overflow
+	 * going to a variadic. Returns the bound argument list on success, plus the
+	 * full parameter list the next level should inherit.
+	 *
+	 * @param list<RouteParameter> $inheritedParams
+	 * @param list<mixed> $inheritedArgs
+	 * @param list<string> $localArgs
+	 * @return array{args: list<mixed>|null, castFailed: bool, params: list<RouteParameter>}
+	 *         args === null  -> signature doesn't fit structurally
+	 *         castFailed      -> a value couldn't cast to its param's type (-> 422)
+	 *         params          -> required+optional params (for inheritance on match)
+	 */
+	private function fitCandidate(
+		RouteParameters $params,
+		array $inheritedParams,
+		array $inheritedArgs,
+		array $localArgs
+	): array {
+		$allParams = array_values(array_merge($params->required, $params->optional));
+
+		if (count($inheritedParams) > count($allParams)) {
+			return ['args' => null, 'castFailed' => false, 'params' => $allParams];
+		}
+
+		// Params beyond the inherited prefix are filled by the local args.
+		$localParams = array_slice($allParams, count($inheritedParams));
+		$boundArgs = $inheritedArgs;
+		$remaining = $localArgs;
+
+		foreach ($localParams as $param) {
+			if ($remaining === []) {
+				// A required local param with no arg to fill it -> no fit.
+				$fits = !in_array($param, $params->required, true);
+				return $fits
+					? ['args' => $boundArgs, 'castFailed' => false, 'params' => $allParams]
+					: ['args' => null, 'castFailed' => false, 'params' => $allParams];
+			}
+			try {
+				/** @psalm-suppress MixedAssignment */
+				$boundArgs[] = $this->castArg(array_shift($remaining), $param->types);
+			} catch (RuntimeException) {
+				return ['args' => null, 'castFailed' => true, 'params' => $allParams];
+			}
+		}
+
+		// Leftover args must be absorbed by a variadic, or this class doesn't fit.
+		if ($remaining !== []) {
+			if ($params->variadic === null) {
+				return ['args' => null, 'castFailed' => false, 'params' => $allParams];
+			}
+			foreach ($remaining as $extra) {
+				try {
+					/** @psalm-suppress MixedAssignment */
+					$boundArgs[] = $this->castArg($extra, $params->variadic->types);
+				} catch (RuntimeException) {
+					return ['args' => null, 'castFailed' => true, 'params' => $allParams];
+				}
+			}
+		}
+
+		return ['args' => $boundArgs, 'castFailed' => false, 'params' => $allParams];
+	}
+
+	/**
+	 * @psalm-mutation-free
+	 * @psalm-suppress ArgumentTypeCoercion
+	 */
+	private function makeRoute(string $fqcn): Route
+	{
+		return new Route($fqcn, $this->config->invokeMethod);
 	}
 
 	/**
@@ -473,6 +464,31 @@ final class Router
 	}
 
 	/**
+	 * The fully-qualified class names of candidate action handlers that
+	 * actually exist at $ns for $method, in priority order. Yields class-strings
+	 * only (no reflection), keeping the hot existence-check path cheap.
+	 *
+	 * @return iterable<string>
+	 */
+	private function existingHandlerClasses(string $ns, string $method): iterable
+	{
+		foreach ($this->candidateActions($method) as [$className]) {
+			$fqcn = $ns . '\\' . $className;
+			if (class_exists($fqcn)) {
+				yield $fqcn;
+			}
+		}
+	}
+
+	private function firstExistingCandidate(string $ns, string $method): ?string
+	{
+		foreach ($this->existingHandlerClasses($ns, $method) as $fqcn) {
+			return $fqcn;
+		}
+		return null;
+	}
+
+	/**
 	 * Does the given namespace have any action handler (for the given method)
 	 * whose signature declares a variadic parameter? Used to detect the
 	 * misconfiguration where a child route lives under a parent whose
@@ -480,29 +496,12 @@ final class Router
 	 */
 	private function namespaceHasVariadicHandler(string $ns, string $method): bool
 	{
-		foreach ($this->candidateActions($method) as [$candidate]) {
-			$fqcn = $ns . '\\' . $candidate;
-			if (!class_exists($fqcn)) {
-				continue;
-			}
-			/** @psalm-suppress ArgumentTypeCoercion */
-			$route = new Route($fqcn, $this->config->invokeMethod);
-			if ($route->parameters->hasVariadic()) {
+		foreach ($this->existingHandlerClasses($ns, $method) as $fqcn) {
+			if ($this->makeRoute($fqcn)->parameters->hasVariadic()) {
 				return true;
 			}
 		}
 		return false;
-	}
-
-	private function firstExistingCandidate(string $ns, string $method): ?string
-	{
-		foreach ($this->candidateActions($method) as [$candidate]) {
-			$fqcn = $ns . '\\' . $candidate;
-			if (class_exists($fqcn)) {
-				return $fqcn;
-			}
-		}
-		return null;
 	}
 
 	/**
@@ -511,15 +510,8 @@ final class Router
 	 */
 	private function anyExistingCandidateNeedsMoreArgs(string $ns, string $method, int $totalArgs): bool
 	{
-		foreach ($this->candidateActions($method) as [$candidate]) {
-			$fqcn = $ns . '\\' . $candidate;
-			if (!class_exists($fqcn)) {
-				continue;
-			}
-			/** @psalm-suppress ArgumentTypeCoercion */
-			$route = new Route($fqcn, $this->config->invokeMethod);
-			$requiredCount = count($route->parameters->required);
-			if ($requiredCount > $totalArgs) {
+		foreach ($this->existingHandlerClasses($ns, $method) as $fqcn) {
+			if (count($this->makeRoute($fqcn)->parameters->required) > $totalArgs) {
 				return true;
 			}
 		}
@@ -544,11 +536,11 @@ final class Router
 			// methods the caller didn't ask about — swallow misconfig
 			// exceptions here so unrelated methods can still be enumerated.
 			try {
-				$result = $this->tryMatch($segments, $candidateMethod);
+				$outcome = $this->tryMatch($segments, $candidateMethod);
 			} catch (UnallowedVariadicParameter | SignatureMismatch) {
 				continue;
 			}
-			if ($result['matches'] !== null) {
+			if ($outcome->isMatch()) {
 				$allowed[] = $candidateMethod;
 			}
 		}
