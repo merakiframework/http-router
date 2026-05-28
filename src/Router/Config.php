@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Router\Exception\InvalidArgument;
-use Doctrine\Inflector\Inflector;
-use Doctrine\Inflector\InflectorFactory;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Psr\Log\NullLogger;
 
@@ -65,12 +63,18 @@ final class Config
 	 */
 	public array $supportedMethods = ['get', 'head', 'post', 'put', 'delete', 'options', 'patch'];
 
+	/**
+	 * @psalm-mutation-free
+	 */
 	private function __construct(string $namespace)
 	{
 		$this->setNamespace($namespace);
 		$this->logger = new NullLogger();
 	}
 
+	/**
+	 * @psalm-pure
+	 */
 	public static function create(string $namespace): self
 	{
 		return new self($namespace);
