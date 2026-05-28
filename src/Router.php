@@ -300,20 +300,12 @@ final class Router
 		array $inheritedArgs,
 		bool $parentMatched
 	): array {
-		$classified = $this->slugToClassName($method);
-		$prefix = $this->config->prefix;
-		$suffix = $this->config->suffix;
-
 		// Candidate order: Action -> Collection -> Item. Try the least-implied
 		// semantics first; the first whose signature actually fits the bound
 		// args (inherited + local) wins. This lets `/persons/schema` map to a
 		// GetAction (0 args) even when Persons\Schema\GetOneAction would also
 		// happen to exist with 0 params.
-		$candidates = [
-			[$prefix . $classified . $suffix, RouteType::Action],
-			[$prefix . $classified . $this->config->pluralIndicator . $suffix, RouteType::Collection],
-			[$prefix . $classified . $this->config->singularIndicator . $suffix, RouteType::Item],
-		];
+		$candidates = $this->candidateActions($method);
 
 		// Tracks an Item/Collection class we excluded because the parent
 		// chain was broken (parent level was skipped). If we ultimately fail
@@ -438,6 +430,26 @@ final class Router
 	}
 
 	/**
+	 * Candidate action class names for $method at a namespace, in priority
+	 * order (Action -> Collection -> Item), each paired with its RouteType.
+	 * Returns the short class names only; callers prepend the namespace.
+	 *
+	 * @psalm-mutation-free
+	 * @return list<array{string, RouteType}>
+	 */
+	private function candidateActions(string $method): array
+	{
+		$base = $this->config->prefix . $this->slugToClassName($method);
+		$suffix = $this->config->suffix;
+
+		return [
+			[$base . $suffix, RouteType::Action],
+			[$base . $this->config->pluralIndicator . $suffix, RouteType::Collection],
+			[$base . $this->config->singularIndicator . $suffix, RouteType::Item],
+		];
+	}
+
+	/**
 	 * For a given segment, return the namespace fragment ("\Foo") that
 	 * represents it. Empty segment (root path) maps to rootPathSubNamespace.
 	 *
@@ -468,15 +480,7 @@ final class Router
 	 */
 	private function namespaceHasVariadicHandler(string $ns, string $method): bool
 	{
-		$classified = $this->slugToClassName($method);
-		$prefix = $this->config->prefix;
-		$suffix = $this->config->suffix;
-
-		foreach ([
-			$prefix . $classified . $suffix,
-			$prefix . $classified . $this->config->pluralIndicator . $suffix,
-			$prefix . $classified . $this->config->singularIndicator . $suffix,
-		] as $candidate) {
+		foreach ($this->candidateActions($method) as [$candidate]) {
 			$fqcn = $ns . '\\' . $candidate;
 			if (!class_exists($fqcn)) {
 				continue;
@@ -492,15 +496,7 @@ final class Router
 
 	private function firstExistingCandidate(string $ns, string $method): ?string
 	{
-		$classified = $this->slugToClassName($method);
-		$prefix = $this->config->prefix;
-		$suffix = $this->config->suffix;
-
-		foreach ([
-			$prefix . $classified . $suffix,
-			$prefix . $classified . $this->config->pluralIndicator . $suffix,
-			$prefix . $classified . $this->config->singularIndicator . $suffix,
-		] as $candidate) {
+		foreach ($this->candidateActions($method) as [$candidate]) {
 			$fqcn = $ns . '\\' . $candidate;
 			if (class_exists($fqcn)) {
 				return $fqcn;
@@ -515,15 +511,7 @@ final class Router
 	 */
 	private function anyExistingCandidateNeedsMoreArgs(string $ns, string $method, int $totalArgs): bool
 	{
-		$classified = $this->slugToClassName($method);
-		$prefix = $this->config->prefix;
-		$suffix = $this->config->suffix;
-
-		foreach ([
-			$prefix . $classified . $suffix,
-			$prefix . $classified . $this->config->pluralIndicator . $suffix,
-			$prefix . $classified . $this->config->singularIndicator . $suffix,
-		] as $candidate) {
+		foreach ($this->candidateActions($method) as [$candidate]) {
 			$fqcn = $ns . '\\' . $candidate;
 			if (!class_exists($fqcn)) {
 				continue;
