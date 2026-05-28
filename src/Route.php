@@ -25,13 +25,14 @@ final class Route
 		public string $invokeMethod,
 		public array $arguments = [],
 		?RouteParameters $parameters = null,
+		public ?RouteType $type = null,
 	) {
 		$this->parameters = $parameters ?: RouteParameters::reflectOn($requestHandler, $invokeMethod);
 	}
 
 	public function withArguments(mixed ...$arguments): self
 	{
-		return new self($this->requestHandler, $this->invokeMethod, $arguments, $this->parameters);
+		return new self($this->requestHandler, $this->invokeMethod, $arguments, $this->parameters, $this->type);
 	}
 
 	public function addArgument(mixed $arg): self
@@ -41,7 +42,12 @@ final class Route
 
 	public function withParameters(RouteParameters $parameters): self
 	{
-		return new self($this->requestHandler, $this->invokeMethod, $this->arguments, $parameters);
+		return new self($this->requestHandler, $this->invokeMethod, $this->arguments, $parameters, $this->type);
+	}
+
+	public function withType(RouteType $type): self
+	{
+		return new self($this->requestHandler, $this->invokeMethod, $this->arguments, $this->parameters, $type);
 	}
 
 	public function toStringWithoutParameters(): string
