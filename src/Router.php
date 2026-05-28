@@ -36,6 +36,9 @@ final class Router
 	/** @psalm-readonly */
 	public Config $config;
 
+	/**
+	 * @psalm-mutation-free
+	 */
 	public function __construct(string|Config $config)
 	{
 		if (is_string($config)) {
@@ -48,7 +51,14 @@ final class Router
 	{
 		$originalMethod = strtolower($method);
 		$target = new RequestTarget($requestTarget);
-		$segments = $this->segmentsToArray($target);
+		$segments = $target->getSegments();
+
+		// An empty path targets the root resource (rootPathSubNamespace, e.g.
+		// \Home). getSegments() returns [] for "/" and "", so re-introduce the
+		// empty segment the root lookup keys off of.
+		if ($segments === []) {
+			$segments = [''];
+		}
 
 		// Method not in supported list (CONNECT, TRACE, made-up methods)
 		// always returns 405 (or 404 if the URL has no handlers at all).
@@ -68,7 +78,6 @@ final class Router
 
 		if ($matchResult['matches'] !== null && $matchResult['matches'] !== []) {
 			$matches = $matchResult['matches'];
-			/** @var Route $primary */
 			$primary = array_pop($matches);
 			return Result::found(
 				$originalMethod,
@@ -130,7 +139,7 @@ final class Router
 	 * Top-level matching attempt. Returns either a list of matches (route chain)
 	 * or null + diagnostic info indicating why no match was produced.
 	 *
-	 * @param string[] $segments
+	 * @param list<string> $segments
 	 * @return array{matches: Route[]|null, missingRequired: bool, castFailure: bool, lastHandler: string|null}
 	 */
 	private function tryMatch(array $segments, string $method): array
@@ -222,8 +231,8 @@ final class Router
 	/**
 	 * Walk URL segments, building a list of (namespace, args) levels.
 	 *
-	 * @param string[] $segments
-	 * @return non-empty-list<array{ns: string, args: list<string>}>
+	 * @param list<string> $segments
+	 * @return non-empty-array<int, array{ns: string, args: list<string>}>
 	 */
 	private function walkSegments(array $segments, string $method): array
 	{
@@ -344,7 +353,7 @@ final class Router
 
 			// Parent's params must be a prefix of this class's params (in
 			// position). Bind inherited args first.
-			$allParams = array_merge($params->required, $params->optional);
+			$allParams = array_values(array_merge($params->required, $params->optional));
 
 			if (count($inheritedParams) > count($allParams)) {
 				continue;
@@ -367,6 +376,7 @@ final class Router
 					break;
 				}
 				try {
+					/** @psalm-suppress MixedAssignment */
 					$boundArgs[] = $this->castArg(array_shift($remaining), $param->types);
 				} catch (RuntimeException) {
 					$argMatchFailed = true;
@@ -386,6 +396,7 @@ final class Router
 				}
 				foreach ($remaining as $extra) {
 					try {
+						/** @psalm-suppress MixedAssignment */
 						$boundArgs[] = $this->castArg($extra, $variadic->types);
 					} catch (RuntimeException) {
 						$argMatchFailed = true;
@@ -429,6 +440,8 @@ final class Router
 	/**
 	 * For a given segment, return the namespace fragment ("\Foo") that
 	 * represents it. Empty segment (root path) maps to rootPathSubNamespace.
+	 *
+	 * @psalm-mutation-free
 	 */
 	private function namespaceSegmentFor(string $segment): string
 	{
@@ -529,7 +542,7 @@ final class Router
 	 * Discover which methods have a handler available for this URL — used to
 	 * decide between 404 and 405, and to populate the Allow header.
 	 *
-	 * @param string[] $segments
+	 * @param list<string> $segments
 	 * @return string[]
 	 */
 	private function discoverAllowedMethods(array $segments, string $currentMethod): array
@@ -565,6 +578,9 @@ final class Router
 		return $allowed;
 	}
 
+	/**
+	 * @param list<string> $segments
+	 */
 	private function respondMethodNotSupported(string $method, RequestTarget $target, array $segments): Result
 	{
 		$allowed = $this->discoverAllowedMethods($segments, $method);
@@ -572,21 +588,6 @@ final class Router
 			return Result::notFound($method, (string)$target, '', []);
 		}
 		return Result::methodNotAllowed($method, (string)$target, $allowed, '', []);
-	}
-
-	/**
-	 * Convert a segments stack into a plain array (preserving order).
-	 *
-	 * @return string[]
-	 */
-	private function segmentsToArray(RequestTarget $target): array
-	{
-		$segs = $target->getSegments();
-		$out = [];
-		while (!$segs->isEmpty()) {
-			$out[] = $segs->pop() ?? '';
-		}
-		return $out;
 	}
 
 	/**
@@ -618,6 +619,9 @@ final class Router
 		));
 	}
 
+	/**
+	 * @psalm-pure
+	 */
 	private function slugToClassName(string $slug): string
 	{
 		return str_replace([' ', '_', '-'], '', ucwords($slug, ' _-'));

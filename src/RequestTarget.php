@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace Meraki\Http;
 
-use Meraki\Http\Segments;
-
 final class RequestTarget
 {
 	private string $path;
@@ -27,16 +25,27 @@ final class RequestTarget
 	}
 
 	/**
+	 * Split the (normalised) path into its ordered segments. A trailing slash —
+	 * including the lone root slash — never yields an empty trailing segment, so
+	 * `/` and `''` both return `[]`, consistent with `/a/b/` returning `['a','b']`.
+	 *
 	 * @psalm-mutation-free
+	 * @return list<string>
 	 */
-	public function getSegments(): Segments
+	public function getSegments(): array
 	{
-		$segments = explode('/', $this->path);
+		// $this->path keeps a lone "/" for the canonical string; strip it here
+		// so the root path yields no segments, matching how all other trailing
+		// slashes are treated.
+		$path = rtrim($this->path, '/');
 
-		// remove first element which is always empty
+		$segments = explode('/', $path);
+
+		// drop the leading '' that precedes the first slash; array_shift
+		// re-indexes, so the result is already a list
 		array_shift($segments);
 
-		return new Segments($segments);
+		return $segments;
 	}
 
 	public function __toString(): string
