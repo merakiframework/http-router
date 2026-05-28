@@ -4,7 +4,6 @@
     "type": "library",
     "require": {
         "php": "^8.4",
-        "doctrine/inflector": "^2.1",
         "willdurand/negotiation": "^3.1",
         "psr/log": "^3.0"
     },
