@@ -7,9 +7,8 @@ use Laminas\Diactoros\Response\TextResponse;
 
 final class GetOneAction
 {
-	public function __invoke(string $person): TextResponse
+	public function __invoke(string $id): TextResponse
 	{
-		// should throw a signature mismatch exception as it doesnt
-		return new TextResponse("GET /persons/schema/$person (GetOneAction)");
+		return new TextResponse('should throw a signature mismatch exception as it doesnt "inherit" the parent param chain');
 	}
 }
