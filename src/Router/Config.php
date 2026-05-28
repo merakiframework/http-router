@@ -22,11 +22,6 @@ final class Config
 	/**
 	 * @psalm-readonly-allow-private-mutation
 	 */
-	public Inflector $inflector;
-
-	/**
-	 * @psalm-readonly-allow-private-mutation
-	 */
 	public string $prefix = '';
 
 	/**
@@ -73,7 +68,6 @@ final class Config
 	private function __construct(string $namespace)
 	{
 		$this->setNamespace($namespace);
-		$this->inflector = InflectorFactory::create()->build();
 		$this->logger = new NullLogger();
 	}
 
@@ -175,7 +169,6 @@ final class Config
 	 */
 	public function __clone()
 	{
-		$this->inflector = clone $this->inflector;
 		$this->logger = clone $this->logger;
 	}
 
