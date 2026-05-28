@@ -67,6 +67,26 @@ final class Result
 	}
 
 	/**
+	 * Returned when a URL is structurally well-formed and matches a handler's
+	 * arg count, but a segment cannot be cast to the handler parameter's
+	 * accepted types. e.g. `/archives/2026/not-a-number` where the month
+	 * param is `?int`. The URL is fine but the value is unprocessable.
+	 *
+	 * @param Route[] $closestMatches
+	 */
+	public static function unprocessableContent(
+		string $method,
+		string $requestTarget,
+		string $handlerThatMatchesRequest,
+		array $closestMatches
+	): self {
+		$self = new self(422, $method, $requestTarget);
+		$self->handlerThatMatchesRequest = $handlerThatMatchesRequest;
+		$self->closestMatches = $closestMatches;
+		return $self;
+	}
+
+	/**
 	 * @param Route[] $closestMatches
 	 */
 	public static function notFound(
