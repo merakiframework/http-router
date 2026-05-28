@@ -1,51 +1,48 @@
 # http-router
-Maps HTTP requests to HTTP responses in PHP 8+.
+Maps HTTP requests to HTTP responses in PHP 8.4+.
 
 ## Features
 
 - [x] root path "/" mappings
 - [x] configure root path sub-namespace
 - [x] GET http method
-- [ ] POST http method
-- [ ] PUT http method
-- [ ] DELETE http method
-- [ ] OPTIONS http method
-- [x] return GET request-handler if no HEAD request-handler is defined
-- [ ] asterix OPTIONS "OPTIONS *" http method
+- [x] POST http method
+- [x] PUT http method
+- [x] DELETE http method
+- [x] OPTIONS http method
+- [x] PATCH http method
+- [x] HEAD http method
+- [x] Auto-synthesized OPTIONS handler for allowed methods at a route
+- [x] Auto-synthesized HEAD handler from GET handler
 - [ ] prevent alternative root path sub-namespace mapping (e.g. "/" is also available at "/home")
-- [x] configure action prefix
-- [x] configure action suffix
-- [x] noun-based URLs (plural) (RESTful URLs)
-- [x] verb-based URLs (singular) (actions)
-- [x] override plural segments (exclude words from auto plural-singular conversion)
-- [ ] override singular segments (exclude words from auto singular-plural conversion)
-- [x] support HEAD request from a GET request handler
+- [x] configure action prefix and suffixes
+- [x] configure action naming conventions for RESTful routes (e.g. GetAllAction, GetOneAction, etc.)
+- [x] 'static' routes (no RESTful semantics, just verb-based routing)
+- [x] disambiguation of 'static' routes vs RESTful routes at same namespace (e.g. /users/create is not treated as a RESTful route with 'create' as an ID)
 - [x] variadic routing (trailing parameters)
-- [x] nested resources
+- [x] nested/child resources (with parameter 'inheritence' from parent resource)
 - [x] required parameter routing
 - [x] optional parameter routing
 - [x] integer parameters
 - [x] string parameters
-- [ ] array parameters
+- [ ] array parameters (CSV in URL segment, e.g. /users/ids/1,2,3)
 - [ ] float parameters
+- [ ] Enum parameters
+- [x] union types (int|string)
+- [ ] value-object parameters (e.g. Money, Distance, Year, Date, etc.)
 - [x] allowed methods provided for 405 results
 - [ ] accepted types provided for 406 results
 - [ ] cache results
 - [ ] logging
-- [ ] provide custom inflector (for noun-plural conversions)
 - [x] provide custom logger
 - [ ] provide custom negotiator (for negotiating media-types/languages/etc.)
 - [ ] negotiate media-types
 - [ ] negotiate languages
 - [ ] Concurrency support for Swoole
 - [ ] Reverse routing
-- [ ] Remove the need on having to define parent resource classes (caveat 1)
-- [ ] route dumper (CLI)
-- [ ] class creator from route (CLI)
-- [ ] Enum support?
-- [ ] value-object support?
-- [ ] Better differentiation between when a plural or noun is needed (so overriding plural words are not needed as much)
-- [x] union types (int|string)
+- [ ] route dumper
+- [ ] route handler generator
+- [ ] add ability to ignore route handler parameters (e.g. allow for routing to a handler with signature `function __invoke(Request $request, int $id, string $action)` where $request will be ignored for routing purposes and only $id and $action will be used to match the URL segments)
 
 ## Installation
 
@@ -55,19 +52,24 @@ composer install meraki/http-router
 
 ## Usage
 
-Basic configuration that will suit most small projects and that is compatible with all the PHP-FIG PSRs:
+Standard usage is simple. Just instantiate the router, pass the request method and request target, then handle the result:
 
 ```php
 <?php
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use Meraki\Http\AutoRouter;
+use Meraki\Http\Router;
 use Laminas\Diactoros\ServerRequestFactory;
 
-$router = new AutoRouter('Project\\Http\\');
+$config = new Router\Config('Project\\Http\\');
+$router = new Router($config);
 $request = ServerRequestFactory::fromGlobals();
 
-$result = $router->route($request);
+try {
+	$result = $router->route($request);
+} catch (Router\Exception\SignatureMismatch|Router\Exception\UnallowedVariadicParameter $e) {
+	// warn about misconfigured route handler signatures (e.g. missing required parameter, variadic parameter not last, etc.)
+}
 
 switch ($result->status) {
 	case 200:
@@ -80,15 +82,29 @@ switch ($result->status) {
 		$params = $route->parameters;
 		break;
 
+	case 204:
+		// the request was successfully processed - auto-synthesized options
+		break;
+
+	case 400:
+		// the request that was malformed
+		$request = $result->request;
+		break;
+
 	case 404:
 		// the request that couldn't be matched
 		$request = $result->request;
-		default;
+		break;
 
 	case 405:
 		// fully qualified class name that was built
 		$allowedMethods = $result->allowedMethods;
-		default;
+		break;
+
+	case 422:
+		// the route that was closest to matching (e.g. if the URL was correct but a parameter value was of the wrong type)
+		$closestMatches = $result->closestMatches;
+		break;
 
 	default:
 		// 500 internal server error
@@ -97,28 +113,29 @@ switch ($result->status) {
 
 To see some other use cases, look at the `examples` directory in the source code. For more advanced setups, check out the documentation, especially the section on configuration.
 
-## Caveats
+## Intentions and design decisions
 
-1. Child resources can only be matched if there is a  parent resource defined with the same HTTP method as the child
+1. Child resources can only be matched if there is a parent resource defined with the same HTTP method as the child
 
 For example, the following HTTP request:
 
 ```text
-POST /contact/0412345678/ping
+POST /artists/123/songs/456
 ```
 
 will only work if the following two classes exist:
 
 ```php
-$parentResource = Project\Http\Contact\PostAction::class;
-$childResource = Project\Http\Contact\Ping\PostAction::class;
+$parentResource = Project\Http\Artists\PostOneAction::class;
+$childResource = Project\Http\Artists\Songs\PostOneAction::class;
 ```
 
-The `$parentResource` will not be instantiated at any point during  routing, but it must still exists and the `$childResource` must have the same method signature as the `$parentResource`.
+The `$parentResource` will not be instantiated at any point during routing, but it must still exists and the `$childResource` must 'extend' the method signature of `$parentResource`.
 
-## Notes
+For example, if `$parentResource` has the method signature `public function __invoke(int $artist)`, then `$childResource` must have a method signature of `public function __invoke(int $artist, int $song)` or `public function __invoke(int $artist, int $song, ...$args)`.
 
-- This library made the intentional decision to not rely on PSR7 for request and response objects. This provides for the greatest compatibility between different HTTP implementations.
+2. This library does not rely on PSR7 for request and response objects. This provides for the greatest compatibility between different HTTP implementations.
+3. A 'convention over configuration' approach is taken to routing, where the URL structure and HTTP method of a request implies the fully qualified class name and method signature of the handler that should be invoked. This means that there is no need for manually defining routes in a separate file or using attributes on handler classes, which can be more error-prone and less performant.
 
 ## Contributing
 
