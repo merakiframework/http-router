@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
-use Meraki\Http\Router\Exception\CannotCast;
-use Meraki\Http\Router\Exception\IncompleteValue;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -39,6 +37,7 @@ final class IntCasterTest extends TestCase
 	{
 		$result = $this->caster->cast([$value], $this->intType, $this->chain);
 
+		$this->assertSame(CastStatus::Successful, $result->status);
 		$this->assertSame($expected, $result->value);
 		$this->assertSame(1, $result->consumed);
 	}
@@ -62,11 +61,11 @@ final class IntCasterTest extends TestCase
 
 	#[Test()]
 	#[DataProvider('invalidInts')]
-	public function throws_on_invalid_int(string $value): void
+	public function returns_cannot_cast_for_invalid_int(string $value): void
 	{
-		$this->expectException(CannotCast::class);
+		$result = $this->caster->cast([$value], $this->intType, $this->chain);
 
-		$this->caster->cast([$value], $this->intType, $this->chain);
+		$this->assertSame(CastStatus::CannotCast, $result->status);
 	}
 
 	/**
@@ -83,13 +82,5 @@ final class IntCasterTest extends TestCase
 			'empty string' => [''],
 			'lone minus' => ['-'],
 		];
-	}
-
-	#[Test()]
-	public function throws_incomplete_when_no_segments(): void
-	{
-		$this->expectException(IncompleteValue::class);
-
-		$this->caster->cast([], $this->intType, $this->chain);
 	}
 }

@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
-use Meraki\Http\Router\Exception\CannotCast;
-use Meraki\Http\Router\Exception\IncompleteValue;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 use Ramsey\Uuid\Rfc4122\UuidV4;
@@ -43,6 +41,7 @@ final class UuidCasterTest extends TestCase
 
 		$result = $this->caster->cast([$uuid], new Type(UuidInterface::class, false, false), $this->chain);
 
+		$this->assertSame(CastStatus::Successful, $result->status);
 		$this->assertInstanceOf(UuidInterface::class, $result->value);
 		$this->assertSame($uuid, $result->value->toString());
 		$this->assertSame(1, $result->consumed);
@@ -51,16 +50,8 @@ final class UuidCasterTest extends TestCase
 	#[Test()]
 	public function rejects_a_malformed_uuid(): void
 	{
-		$this->expectException(CannotCast::class);
+		$result = $this->caster->cast(['not-a-uuid'], new Type(UuidInterface::class, false, false), $this->chain);
 
-		$this->caster->cast(['not-a-uuid'], new Type(UuidInterface::class, false, false), $this->chain);
-	}
-
-	#[Test()]
-	public function throws_incomplete_when_no_segments(): void
-	{
-		$this->expectException(IncompleteValue::class);
-
-		$this->caster->cast([], new Type(UuidInterface::class, false, false), $this->chain);
+		$this->assertSame(CastStatus::CannotCast, $result->status);
 	}
 }

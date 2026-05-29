@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
-use Meraki\Http\Router\Exception\CannotCast;
-use Meraki\Http\Router\Exception\IncompleteValue;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -38,6 +36,7 @@ final class FloatCasterTest extends TestCase
 	{
 		$result = $this->caster->cast([$value], $this->floatType, $this->chain);
 
+		$this->assertSame(CastStatus::Successful, $result->status);
 		$this->assertIsFloat($result->value);
 		$this->assertSame($value, (string) $result->value);
 		$this->assertSame(1, $result->consumed);
@@ -63,11 +62,11 @@ final class FloatCasterTest extends TestCase
 
 	#[Test()]
 	#[DataProvider('invalidFloats')]
-	public function throws_when_value_would_lose_information(string $value): void
+	public function returns_cannot_cast_when_value_would_lose_information(string $value): void
 	{
-		$this->expectException(CannotCast::class);
+		$result = $this->caster->cast([$value], $this->floatType, $this->chain);
 
-		$this->caster->cast([$value], $this->floatType, $this->chain);
+		$this->assertSame(CastStatus::CannotCast, $result->status);
 	}
 
 	/**
@@ -79,13 +78,5 @@ final class FloatCasterTest extends TestCase
 			['e2'], ['abc'], ['-e-4'], ['E'], ['abc.def'], ['8e'], ['E2'],
 			['8E'], ['-'], ['+'], ['.a'], ['a.'], ['-1.a'], ['.'], ['-.'], ['1+'],
 		];
-	}
-
-	#[Test()]
-	public function throws_incomplete_when_no_segments(): void
-	{
-		$this->expectException(IncompleteValue::class);
-
-		$this->caster->cast([], $this->floatType, $this->chain);
 	}
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
-use Meraki\Http\Router\Exception\IncompleteValue;
 
 /**
  * The universal caster: a `string` parameter accepts any URL segment verbatim
@@ -26,16 +25,12 @@ final class StringCaster implements Caster
 	}
 
 	/**
-	 * @param list<string> $segments
+	 * @param non-empty-list<string> $segments
 	 * @psalm-pure
 	 */
 	#[\Override]
 	public function cast(array $segments, Type $type, CasterChain $chain): CastResult
 	{
-		if ($segments === []) {
-			throw IncompleteValue::ranOut($type);
-		}
-
-		return new CastResult($segments[0], 1);
+		return CastResult::ok($segments[0], 1);
 	}
 }

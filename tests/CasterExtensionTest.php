@@ -8,7 +8,6 @@ use Meraki\Http\Router\Caster;
 use Meraki\Http\Router\CasterChain;
 use Meraki\Http\Router\CastResult;
 use Meraki\Http\Router\StringCaster;
-use Meraki\Http\Router\Exception\CannotCast;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -66,7 +65,7 @@ final class CasterExtensionTest extends TestCase
 
 			public function cast(array $segments, Type $type, CasterChain $chain): CastResult
 			{
-				throw CannotCast::value($segments[0] ?? '', $type);
+				return CastResult::cannotCast();
 			}
 		};
 	}

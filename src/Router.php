@@ -10,10 +10,9 @@ use Meraki\Http\Router\MatchOutcome;
 use Meraki\Http\Router\MatchFailure;
 use Meraki\Http\Router\PickedAction;
 use Meraki\Http\Router\CasterChain;
+use Meraki\Http\Router\CastStatus;
 use Meraki\Http\Router\Exception\UnallowedVariadicParameter;
 use Meraki\Http\Router\Exception\SignatureMismatch;
-use Meraki\Http\Router\Exception\CannotCast;
-use Meraki\Http\Router\Exception\IncompleteValue;
 
 /**
  * Class-driven HTTP router. The action class name encodes the developer's
@@ -421,11 +420,13 @@ final class Router
 					: ['args' => null, 'castFailed' => false, 'incomplete' => false, 'params' => $allParams];
 			}
 
-			try {
-				$result = $chain->cast($available, ...$param->types);
-			} catch (IncompleteValue) {
+			$result = $chain->cast($available, ...$param->types);
+
+			if ($result->status === CastStatus::IncompleteValue) {
 				return ['args' => null, 'castFailed' => false, 'incomplete' => true, 'params' => $allParams];
-			} catch (CannotCast) {
+			}
+
+			if ($result->status === CastStatus::CannotCast) {
 				return ['args' => null, 'castFailed' => true, 'incomplete' => false, 'params' => $allParams];
 			}
 
@@ -446,11 +447,13 @@ final class Router
 			$variadic = $params->variadic;
 
 			while ($leftover !== []) {
-				try {
-					$result = $chain->cast($leftover, ...$variadic->types);
-				} catch (IncompleteValue) {
+				$result = $chain->cast($leftover, ...$variadic->types);
+
+				if ($result->status === CastStatus::IncompleteValue) {
 					return ['args' => null, 'castFailed' => false, 'incomplete' => true, 'params' => $allParams];
-				} catch (CannotCast) {
+				}
+
+				if ($result->status === CastStatus::CannotCast) {
 					return ['args' => null, 'castFailed' => true, 'incomplete' => false, 'params' => $allParams];
 				}
 

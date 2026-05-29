@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
-use Meraki\Http\Router\Exception\IncompleteValue;
 use Project\Types\Slug;
 use Project\Types\Year;
 use Project\Types\Date;
@@ -50,6 +49,7 @@ final class ValueObjectCasterTest extends TestCase
 	{
 		$result = $this->caster->cast(['my-post'], new Type(Slug::class, false, false), $this->chain);
 
+		$this->assertSame(CastStatus::Successful, $result->status);
 		$this->assertInstanceOf(Slug::class, $result->value);
 		$this->assertSame('my-post', $result->value->value);
 		$this->assertSame(1, $result->consumed);
@@ -60,6 +60,7 @@ final class ValueObjectCasterTest extends TestCase
 	{
 		$result = $this->caster->cast(['2026', 'August', '27'], new Type(Date::class, false, false), $this->chain);
 
+		$this->assertSame(CastStatus::Successful, $result->status);
 		$this->assertInstanceOf(Date::class, $result->value);
 		$this->assertSame(2026, $result->value->year->value);
 		$this->assertSame(Month::August, $result->value->month);
@@ -70,18 +71,10 @@ final class ValueObjectCasterTest extends TestCase
 	}
 
 	#[Test()]
-	public function throws_incomplete_when_not_enough_segments(): void
+	public function reports_incomplete_when_not_enough_segments(): void
 	{
-		$this->expectException(IncompleteValue::class);
+		$result = $this->caster->cast(['2026', 'August'], new Type(Date::class, false, false), $this->chain);
 
-		$this->caster->cast(['2026', 'August'], new Type(Date::class, false, false), $this->chain);
-	}
-
-	#[Test()]
-	public function throws_incomplete_when_no_segments(): void
-	{
-		$this->expectException(IncompleteValue::class);
-
-		$this->caster->cast([], new Type(Slug::class, false, false), $this->chain);
+		$this->assertSame(CastStatus::IncompleteValue, $result->status);
 	}
 }

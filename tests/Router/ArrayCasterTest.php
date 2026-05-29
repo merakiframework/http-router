@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
-use Meraki\Http\Router\Exception\CannotCast;
-use Meraki\Http\Router\Exception\IncompleteValue;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -38,6 +36,7 @@ final class ArrayCasterTest extends TestCase
 	{
 		$result = $this->caster->cast([$value], $this->arrayType, $this->chain);
 
+		$this->assertSame(CastStatus::Successful, $result->status);
 		$this->assertIsArray($result->value);
 		$this->assertTrue(array_is_list($result->value));
 		$this->assertEquals($expected, $result->value);
@@ -58,11 +57,11 @@ final class ArrayCasterTest extends TestCase
 
 	#[Test()]
 	#[DataProvider('invalidArrays')]
-	public function throws_when_list_is_malformed_or_mixed(string $value): void
+	public function returns_cannot_cast_when_list_is_malformed_or_mixed(string $value): void
 	{
-		$this->expectException(CannotCast::class);
+		$result = $this->caster->cast([$value], $this->arrayType, $this->chain);
 
-		$this->caster->cast([$value], $this->arrayType, $this->chain);
+		$this->assertSame(CastStatus::CannotCast, $result->status);
 	}
 
 	/**
@@ -77,13 +76,5 @@ final class ArrayCasterTest extends TestCase
 			'missing element' => ['one,,three'],
 			'different types' => ['1,one,3.14159'],
 		];
-	}
-
-	#[Test()]
-	public function throws_incomplete_when_no_segments(): void
-	{
-		$this->expectException(IncompleteValue::class);
-
-		$this->caster->cast([], $this->arrayType, $this->chain);
 	}
 }

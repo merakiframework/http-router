@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
-use Meraki\Http\Router\Exception\CannotCast;
-use Meraki\Http\Router\Exception\IncompleteValue;
 
 /**
  * Casts a URL segment to a PHP enum case. Backed enums use ::tryFrom() (with the
@@ -28,16 +26,12 @@ final class EnumCaster implements Caster
 	}
 
 	/**
-	 * @param list<string> $segments
+	 * @param non-empty-list<string> $segments
 	 * @psalm-mutation-free
 	 */
 	#[\Override]
 	public function cast(array $segments, Type $type, CasterChain $chain): CastResult
 	{
-		if ($segments === []) {
-			throw IncompleteValue::ranOut($type);
-		}
-
 		$segment = $segments[0];
 		/** @var class-string<\UnitEnum> $enum */
 		$enum = $type->name;
@@ -47,30 +41,30 @@ final class EnumCaster implements Caster
 
 		if ($isBacked) {
 			/** @var class-string<\BackedEnum> $enum */
-			$case = $this->fromBacked($enum, $segment, $type);
+			$case = $this->fromBacked($enum, $segment);
 		} else {
 			$case = $this->fromName($enum, $segment);
 		}
 
 		if ($case === null) {
-			throw CannotCast::value($segment, $type);
+			return CastResult::cannotCast();
 		}
 
-		return new CastResult($case, 1);
+		return CastResult::ok($case, 1);
 	}
 
 	/**
 	 * @param class-string<\BackedEnum> $enum
 	 * @psalm-mutation-free
 	 */
-	private function fromBacked(string $enum, string $segment, Type $type): ?\BackedEnum
+	private function fromBacked(string $enum, string $segment): ?\BackedEnum
 	{
 		/** @psalm-suppress ImpureMethodCall */
 		$backing = (string) (new \ReflectionEnum($enum))->getBackingType();
 
 		if ($backing === 'int') {
 			if (!preg_match('/^-?\d+$/', $segment)) {
-				throw CannotCast::value($segment, $type);
+				return null;
 			}
 
 			return $enum::tryFrom((int) $segment);

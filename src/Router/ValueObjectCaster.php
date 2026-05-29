@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
-use Meraki\Http\Router\Exception\IncompleteValue;
 
 /**
  * Builds a value object from URL segments via its constructor. Each constructor
@@ -12,7 +11,7 @@ use Meraki\Http\Router\Exception\IncompleteValue;
  * scalar, an enum, a UUID, or another value object (arbitrary nesting, e.g.
  * `Date(Year $year, Month $month, Day $day)`). A value object therefore consumes
  * one segment per (recursive) leaf parameter; running out of segments while a
- * required parameter is unfilled surfaces as IncompleteValue (-> 400).
+ * required parameter is unfilled yields CastResult::incomplete() (-> 400).
  *
  * Opt-in: register with Config::withCaster(new ValueObjectCaster()).
  *
@@ -48,16 +47,12 @@ final class ValueObjectCaster implements Caster
 	}
 
 	/**
-	 * @param list<string> $segments
+	 * @param non-empty-list<string> $segments
 	 * @psalm-mutation-free
 	 */
 	#[\Override]
 	public function cast(array $segments, Type $type, CasterChain $chain): CastResult
 	{
-		if ($segments === []) {
-			throw IncompleteValue::ranOut($type);
-		}
-
 		/**
 		 * @psalm-suppress ImpureMethodCall
 		 * @var class-string $class
@@ -66,7 +61,7 @@ final class ValueObjectCaster implements Caster
 		$constructor = (new \ReflectionClass($class))->getConstructor();
 
 		if ($constructor === null) {
-			throw IncompleteValue::ranOut($type);
+			return CastResult::cannotCast();
 		}
 
 		$args = [];
@@ -81,17 +76,22 @@ final class ValueObjectCaster implements Caster
 				if ($param->isOptional()) {
 					break; // optional constructor params take their defaults
 				}
-				throw IncompleteValue::ranOut($type);
+				return CastResult::incomplete();
 			}
 
 			/** @psalm-suppress ImpureMethodCall */
-			$result = $chain->cast($remaining, ...Type::listFromReflection($param->getType()));
+			$sub = $chain->cast($remaining, ...Type::listFromReflection($param->getType()));
+
+			if (!$sub->isOk()) {
+				return $sub; // propagate cannotCast / incomplete
+			}
+
 			/** @psalm-suppress MixedAssignment */
-			$args[] = $result->value;
-			$consumed += $result->consumed;
+			$args[] = $sub->value;
+			$consumed += $sub->consumed;
 		}
 
 		/** @psalm-suppress ImpureMethodCall,MixedMethodCall */
-		return new CastResult(new $class(...$args), $consumed);
+		return CastResult::ok(new $class(...$args), $consumed);
 	}
 }

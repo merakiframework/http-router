@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
-use Meraki\Http\Router\Exception\CannotCast;
-use Meraki\Http\Router\Exception\IncompleteValue;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -29,6 +27,7 @@ final class CasterChainTest extends TestCase
 
 		$result = $chain->cast(['2026'], $this->int, $this->string);
 
+		$this->assertSame(CastStatus::Successful, $result->status);
 		$this->assertSame(2026, $result->value);
 		$this->assertSame(1, $result->consumed);
 	}
@@ -40,6 +39,7 @@ final class CasterChainTest extends TestCase
 
 		$result = $chain->cast(['abc'], $this->int, $this->string);
 
+		$this->assertSame(CastStatus::Successful, $result->status);
 		$this->assertSame('abc', $result->value);
 	}
 
@@ -50,22 +50,40 @@ final class CasterChainTest extends TestCase
 
 		$result = $chain->cast(['x'], new Type('null', true, true), $this->string);
 
+		$this->assertSame(CastStatus::Successful, $result->status);
 		$this->assertSame('x', $result->value);
 	}
 
 	#[Test()]
-	public function throws_when_no_caster_supports_the_type(): void
+	public function returns_cannot_cast_when_no_caster_supports_the_type(): void
 	{
-		$this->expectException(CannotCast::class);
+		$result = (new CasterChain([]))->cast(['x'], $this->int);
 
-		(new CasterChain([]))->cast(['x'], $this->int);
+		$this->assertSame(CastStatus::CannotCast, $result->status);
 	}
 
 	#[Test()]
-	public function propagates_incomplete_when_segments_run_out(): void
+	public function returns_incomplete_when_called_with_no_segments(): void
 	{
-		$this->expectException(IncompleteValue::class);
+		$result = (new CasterChain([new IntCaster()]))->cast([], $this->int);
 
-		(new CasterChain([new IntCaster()]))->cast([], $this->int);
+		$this->assertSame(CastStatus::IncompleteValue, $result->status);
+	}
+
+	#[Test()]
+	public function propagates_incomplete_from_a_caster(): void
+	{
+		// A caster that always reports incomplete propagates through the chain.
+		$alwaysIncomplete = new class () implements Caster {
+			public function supports(Type $type): bool { return $type->name === 'int'; }
+			public function cast(array $segments, Type $type, CasterChain $chain): CastResult
+			{
+				return CastResult::incomplete();
+			}
+		};
+
+		$result = (new CasterChain([$alwaysIncomplete]))->cast(['x'], $this->int);
+
+		$this->assertSame(CastStatus::IncompleteValue, $result->status);
 	}
 }
