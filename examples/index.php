@@ -61,6 +61,17 @@ $request = ServerRequestFactory::fromGlobals();
  *   (An Action child does NOT inherit a RESTful parent's id — only GetAll/GetOne do.
  *    So /users/{id}/profile is a 404; the profile route is reached via /users/profile/{id} above.)
  *
+ * Typed parameters (the segment is cast to the handler parameter's type by the configured casters):
+ *   GET /cards/hearts			-> Cards\GetOneAction(Suit::Hearts)		(enum: string-backed by value; pure enums by case name, case-insensitive)
+ *   GET /tokens/{uuid}			-> Tokens\GetOneAction($uuid)			(ramsey/uuid UuidInterface — install ramsey/uuid yourself; the caster is inert otherwise)
+ *   (built-in casters: string, int, float, array (CSV), enum, uuid. Register your own via Config::withCaster().)
+ *
+ * Value objects consume one segment per constructor parameter, recursively (opt-in: Config::withCaster(new ValueObjectCaster())):
+ *   GET /posts/2026/August/27	-> Posts\GetAllAction(new Date(new Year(2026), Month::August, new Day('27')))
+ *   												(Date(Year $y, Month $m, Day $d) — each ctor param is itself cast through the chain)
+ *   GET /posts					-> Posts\GetAllAction(null)				(the optional ?Date defaults to null when no segments are given)
+ *   GET /posts/2026			-> 400									(partial value object: required constructor segments are missing)
+ *
  * Variadic absorbing trailing segments (optional ints):
  *   GET /archives				-> Archives\GetAllAction()
  *   GET /archives/2026			-> Archives\GetAllAction(2026)

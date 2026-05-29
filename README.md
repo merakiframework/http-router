@@ -25,11 +25,13 @@ Maps HTTP requests to HTTP responses in PHP 8.4+.
 - [x] optional parameter routing
 - [x] integer parameters
 - [x] string parameters
-- [ ] array parameters (CSV in URL segment, e.g. /users/ids/1,2,3)
-- [ ] float parameters
-- [ ] Enum parameters
+- [x] array parameters (CSV in URL segment, e.g. /users/ids/1,2,3)
+- [x] float parameters
+- [x] Enum parameters (backed by value; pure enums by case name)
 - [x] union types (int|string)
-- [ ] value-object parameters (e.g. Money, Distance, Year, Date, etc.)
+- [x] value-object parameters (constructor-driven, nesting supported, e.g. Date(Year, Month, Day))
+- [x] UUID parameters (via ramsey/uuid — install it yourself; the caster is inert otherwise)
+- [x] pluggable custom parameter types (register a Caster via Config::withCaster())
 - [x] allowed methods provided for 405 results
 - [ ] accepted types provided for 406 results
 - [ ] cache results

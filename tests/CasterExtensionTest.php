@@ -5,6 +5,8 @@ namespace Meraki\Http;
 
 use Meraki\Http\Router\Config;
 use Meraki\Http\Router\Caster;
+use Meraki\Http\Router\CasterChain;
+use Meraki\Http\Router\CastResult;
 use Meraki\Http\Router\StringCaster;
 use Meraki\Http\Router\Exception\CannotCast;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -26,7 +28,7 @@ final class CasterExtensionTest extends TestCase
 	{
 		$casters = Config::create(self::NS)->casters;
 
-		$this->assertCount(4, $casters);
+		$this->assertCount(6, $casters);
 		$this->assertInstanceOf(StringCaster::class, $casters[0]);
 	}
 
@@ -37,7 +39,7 @@ final class CasterExtensionTest extends TestCase
 
 		$config = Config::create(self::NS)->withCaster($custom);
 
-		$this->assertCount(5, $config->casters);
+		$this->assertCount(7, $config->casters);
 		$this->assertSame($custom, $config->casters[0]);
 	}
 
@@ -62,9 +64,9 @@ final class CasterExtensionTest extends TestCase
 				return $type->name === 'int';
 			}
 
-			public function cast(string $segment, Type $type): mixed
+			public function cast(array $segments, Type $type, CasterChain $chain): CastResult
 			{
-				throw CannotCast::value($segment, $type);
+				throw CannotCast::value($segments[0] ?? '', $type);
 			}
 		};
 	}

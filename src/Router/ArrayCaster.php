@@ -5,6 +5,7 @@ namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
 use Meraki\Http\Router\Exception\CannotCast;
+use Meraki\Http\Router\Exception\IncompleteValue;
 
 /**
  * Casts a comma-separated URL segment (e.g. "1,2,3") into a homogeneous list.
@@ -27,12 +28,18 @@ final class ArrayCaster implements Caster
 	}
 
 	/**
-	 * @return list<int|float|string>
+	 * @param list<string> $segments
 	 * @psalm-pure
 	 */
 	#[\Override]
-	public function cast(string $segment, Type $type): array
+	public function cast(array $segments, Type $type, CasterChain $chain): CastResult
 	{
+		if ($segments === []) {
+			throw IncompleteValue::ranOut($type);
+		}
+
+		$segment = $segments[0];
+
 		if (empty($segment)) {
 			throw CannotCast::value($segment, $type);
 		}
@@ -56,7 +63,7 @@ final class ArrayCaster implements Caster
 			$casted[] = $value;
 		}
 
-		return $casted;
+		return new CastResult($casted, 1);
 	}
 
 	/**

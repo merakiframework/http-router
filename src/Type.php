@@ -28,6 +28,32 @@ final class Type
 		return new self($type->getName(), $type->isBuiltin(), $type->allowsNull());
 	}
 
+	/**
+	 * Flatten a (possibly union/nullable) reflection type into a list of single
+	 * named types — the unit a Caster is asked about.
+	 *
+	 * @return list<Type>
+	 * @psalm-pure
+	 */
+	public static function listFromReflection(?\ReflectionType $type): array
+	{
+		if ($type instanceof \ReflectionUnionType) {
+			$types = [];
+			foreach ($type->getTypes() as $member) {
+				if ($member instanceof \ReflectionNamedType) {
+					$types[] = self::fromReflection($member);
+				}
+			}
+			return $types;
+		}
+
+		if ($type instanceof \ReflectionNamedType) {
+			return [self::fromReflection($type)];
+		}
+
+		return [];
+	}
+
 	public function isBuiltin(): bool
 	{
 		return $this->builtin;

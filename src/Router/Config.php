@@ -85,6 +85,8 @@ final class Config
 			new IntCaster(),
 			new FloatCaster(),
 			new ArrayCaster(),
+			new EnumCaster(),
+			new UuidCaster(),
 		];
 	}
 

@@ -5,6 +5,7 @@ namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
 use Meraki\Http\Router\Exception\CannotCast;
+use Meraki\Http\Router\Exception\IncompleteValue;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -14,11 +15,13 @@ use PHPUnit\Framework\TestCase;
 final class FloatCasterTest extends TestCase
 {
 	private FloatCaster $caster;
+	private CasterChain $chain;
 	private Type $floatType;
 
 	protected function setUp(): void
 	{
 		$this->caster = new FloatCaster();
+		$this->chain = new CasterChain([]);
 		$this->floatType = new Type('float', true, false);
 	}
 
@@ -33,10 +36,11 @@ final class FloatCasterTest extends TestCase
 	#[DataProvider('validFloats')]
 	public function casts_values_that_round_trip(string $value): void
 	{
-		$casted = $this->caster->cast($value, $this->floatType);
+		$result = $this->caster->cast([$value], $this->floatType, $this->chain);
 
-		$this->assertIsFloat($casted);
-		$this->assertSame($value, (string) $casted);
+		$this->assertIsFloat($result->value);
+		$this->assertSame($value, (string) $result->value);
+		$this->assertSame(1, $result->consumed);
 	}
 
 	/**
@@ -63,7 +67,7 @@ final class FloatCasterTest extends TestCase
 	{
 		$this->expectException(CannotCast::class);
 
-		$this->caster->cast($value, $this->floatType);
+		$this->caster->cast([$value], $this->floatType, $this->chain);
 	}
 
 	/**
@@ -75,5 +79,13 @@ final class FloatCasterTest extends TestCase
 			['e2'], ['abc'], ['-e-4'], ['E'], ['abc.def'], ['8e'], ['E2'],
 			['8E'], ['-'], ['+'], ['.a'], ['a.'], ['-1.a'], ['.'], ['-.'], ['1+'],
 		];
+	}
+
+	#[Test()]
+	public function throws_incomplete_when_no_segments(): void
+	{
+		$this->expectException(IncompleteValue::class);
+
+		$this->caster->cast([], $this->floatType, $this->chain);
 	}
 }

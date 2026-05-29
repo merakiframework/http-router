@@ -11,8 +11,10 @@ use RuntimeException;
  * Thrown by a Caster when it supports a parameter's type but the URL segment is
  * not a valid value for it (e.g. "not-a-number" for an int). The router catches
  * this while fitting a candidate and maps it to a 422 Unprocessable Content.
+ *
+ * Subclassed by IncompleteValue (ran out of segments -> 400), so this is not final.
  */
-final class CannotCast extends RuntimeException implements Exception
+class CannotCast extends RuntimeException implements Exception
 {
 	/**
 	 * @psalm-pure

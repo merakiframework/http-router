@@ -5,6 +5,7 @@ namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
 use Meraki\Http\Router\Exception\CannotCast;
+use Meraki\Http\Router\Exception\IncompleteValue;
 
 /**
  * @psalm-immutable
@@ -22,11 +23,17 @@ final class FloatCaster implements Caster
 	}
 
 	/**
+	 * @param list<string> $segments
 	 * @psalm-pure
 	 */
 	#[\Override]
-	public function cast(string $segment, Type $type): float
+	public function cast(array $segments, Type $type, CasterChain $chain): CastResult
 	{
+		if ($segments === []) {
+			throw IncompleteValue::ranOut($type);
+		}
+
+		$segment = $segments[0];
 		$float = (float) $segment;
 
 		// Reject anything that doesn't round-trip — i.e. casting would lose or
@@ -35,6 +42,6 @@ final class FloatCaster implements Caster
 			throw CannotCast::value($segment, $type);
 		}
 
-		return $float;
+		return new CastResult($float, 1);
 	}
 }

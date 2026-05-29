@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
+use Meraki\Http\Router\Exception\IncompleteValue;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -13,11 +14,13 @@ use PHPUnit\Framework\TestCase;
 final class StringCasterTest extends TestCase
 {
 	private StringCaster $caster;
+	private CasterChain $chain;
 	private Type $stringType;
 
 	protected function setUp(): void
 	{
 		$this->caster = new StringCaster();
+		$this->chain = new CasterChain([]);
 		$this->stringType = new Type('string', true, false);
 	}
 
@@ -32,7 +35,10 @@ final class StringCasterTest extends TestCase
 	#[DataProvider('anySegment')]
 	public function returns_any_segment_verbatim_and_never_throws(string $value): void
 	{
-		$this->assertSame($value, $this->caster->cast($value, $this->stringType));
+		$result = $this->caster->cast([$value], $this->stringType, $this->chain);
+
+		$this->assertSame($value, $result->value);
+		$this->assertSame(1, $result->consumed);
 	}
 
 	/**
@@ -47,5 +53,13 @@ final class StringCasterTest extends TestCase
 			'compound' => ['pest-control'],
 			'empty' => [''],
 		];
+	}
+
+	#[Test()]
+	public function throws_incomplete_when_no_segments(): void
+	{
+		$this->expectException(IncompleteValue::class);
+
+		$this->caster->cast([], $this->stringType, $this->chain);
 	}
 }

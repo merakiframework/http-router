@@ -166,20 +166,10 @@ final class RouteParameters implements \Countable
 
 	/**
 	 * @return Type[]
+	 * @psalm-pure
 	 */
 	private static function toTypes(?\ReflectionType $type): array
 	{
-		/** @var Type[] $types */
-		$types = [];
-
-		if ($type instanceof \ReflectionUnionType) {
-			foreach ($type->getTypes() as $t) {
-				$types = array_merge($types, self::toTypes($t));
-			}
-		} elseif ($type instanceof \ReflectionNamedType) {
-			$types[] = Type::fromReflection($type);
-		}
-
-		return $types;
+		return Type::listFromReflection($type);
 	}
 }

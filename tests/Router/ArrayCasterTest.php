@@ -5,6 +5,7 @@ namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
 use Meraki\Http\Router\Exception\CannotCast;
+use Meraki\Http\Router\Exception\IncompleteValue;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -14,11 +15,13 @@ use PHPUnit\Framework\TestCase;
 final class ArrayCasterTest extends TestCase
 {
 	private ArrayCaster $caster;
+	private CasterChain $chain;
 	private Type $arrayType;
 
 	protected function setUp(): void
 	{
 		$this->caster = new ArrayCaster();
+		$this->chain = new CasterChain([]);
 		$this->arrayType = new Type('array', true, false);
 	}
 
@@ -33,10 +36,12 @@ final class ArrayCasterTest extends TestCase
 	#[DataProvider('validArrays')]
 	public function casts_homogeneous_csv_lists(string $value, array $expected): void
 	{
-		$casted = $this->caster->cast($value, $this->arrayType);
+		$result = $this->caster->cast([$value], $this->arrayType, $this->chain);
 
-		$this->assertTrue(array_is_list($casted));
-		$this->assertEquals($expected, $casted);
+		$this->assertIsArray($result->value);
+		$this->assertTrue(array_is_list($result->value));
+		$this->assertEquals($expected, $result->value);
+		$this->assertSame(1, $result->consumed);
 	}
 
 	/**
@@ -57,7 +62,7 @@ final class ArrayCasterTest extends TestCase
 	{
 		$this->expectException(CannotCast::class);
 
-		$this->caster->cast($value, $this->arrayType);
+		$this->caster->cast([$value], $this->arrayType, $this->chain);
 	}
 
 	/**
@@ -72,5 +77,13 @@ final class ArrayCasterTest extends TestCase
 			'missing element' => ['one,,three'],
 			'different types' => ['1,one,3.14159'],
 		];
+	}
+
+	#[Test()]
+	public function throws_incomplete_when_no_segments(): void
+	{
+		$this->expectException(IncompleteValue::class);
+
+		$this->caster->cast([], $this->arrayType, $this->chain);
 	}
 }

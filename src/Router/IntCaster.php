@@ -5,6 +5,7 @@ namespace Meraki\Http\Router;
 
 use Meraki\Http\Type;
 use Meraki\Http\Router\Exception\CannotCast;
+use Meraki\Http\Router\Exception\IncompleteValue;
 
 /**
  * @psalm-immutable
@@ -22,15 +23,22 @@ final class IntCaster implements Caster
 	}
 
 	/**
+	 * @param list<string> $segments
 	 * @psalm-pure
 	 */
 	#[\Override]
-	public function cast(string $segment, Type $type): int
+	public function cast(array $segments, Type $type, CasterChain $chain): CastResult
 	{
+		if ($segments === []) {
+			throw IncompleteValue::ranOut($type);
+		}
+
+		$segment = $segments[0];
+
 		if (!preg_match('/^-?\d+$/', $segment)) {
 			throw CannotCast::value($segment, $type);
 		}
 
-		return (int) $segment;
+		return new CastResult((int) $segment, 1);
 	}
 }
