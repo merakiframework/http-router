@@ -41,6 +41,13 @@ $request = ServerRequestFactory::fromGlobals();
  * 																an id before 'profile' and after 'users', e.g. "/users/{id}/profile/{id}")
  *   GET /users/create			-> Users\Create\GetAction()		(This is a 'statically' defined route)
  *
+ * Static (Action) routing vs RESTful routing:
+ *   A static route bypasses dynamic/RESTful matching entirely — it matches a fixed path as if the file
+ *   existed there, and binds only the segments that FOLLOW its own namespace (it never inherits a
+ *   parent's args). Prefer it for verbs, or to override a dynamic route with a fixed one — e.g. a vanity
+ *   item route /users/{username} alongside a static /users/create the app always needs. Mixing the two
+ *   can be ambiguous: see examples/Http/Music/TrackInfo/GetAction.php for a worked example.
+ *
  * Nested RESTful chain (child inherits parent's args):
  *   GET /states/{state}															-> States\GetOneAction($state)
  *   GET /states/{state}/suburbs													-> States\Suburbs\GetAllAction($state)
