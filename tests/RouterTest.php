@@ -117,8 +117,8 @@ final class RouterTest extends TestCase
 			'Action: GET /contact/daniel -> Contact\GetAction(daniel)' => [
 				'get', '/contact/daniel', 'Contact\\GetAction', ['daniel'], RouteType::Action,
 			],
-			'Action sub-route: GET /contact/daniel/email -> Contact\Email\GetAction(daniel)' => [
-				'get', '/contact/daniel/email', 'Contact\\Email\\GetAction', ['daniel'], RouteType::Action,
+			'Action sub-route: GET /contact/email/daniel -> Contact\Email\GetAction(daniel)' => [
+				'get', '/contact/email/daniel', 'Contact\\Email\\GetAction', ['daniel'], RouteType::Action,
 			],
 		];
 	}
@@ -192,15 +192,40 @@ final class RouterTest extends TestCase
 	#[Test()]
 	public function parent_args_are_inherited_by_child_route(): void
 	{
+		// RESTful (GetAll/GetOne) children inherit the parent chain: the nested
+		// item carries both the state and suburb ids down from its parents.
 		$sut = $this->createRouterWithDefaultConfig();
 
-		$result = $sut->route('get', '/users/1/profile');
+		$result = $sut->route('get', '/states/qld/suburbs/emerald');
 
 		$this->assertResult($result)
 			->hasStatusOf(200)
 			->hasRouteThat()
+			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . 'States\\Suburbs\\GetOneAction')
+			->hasArguments(['qld', 'emerald']);
+	}
+
+	#[Test()]
+	public function action_routes_never_inherit_parent_args(): void
+	{
+		$sut = $this->createRouterWithDefaultConfig();
+
+		// An Action binds ONLY the segments after its own namespace; it never
+		// takes a leading/inherited segment. So the leading-id forms 404 and the
+		// trailing forms resolve.
+		$this->assertResult($sut->route('get', '/users/1/profile'))->hasStatusOf(404);
+		$this->assertResult($sut->route('get', '/contact/daniel/email'))->hasStatusOf(404);
+
+		$this->assertResult($sut->route('get', '/users/profile/1'))
+			->hasStatusOf(200)
+			->hasRouteThat()
 			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . 'Users\\Profile\\GetAction')
 			->hasArguments(['1']);
+		$this->assertResult($sut->route('get', '/contact/email/daniel'))
+			->hasStatusOf(200)
+			->hasRouteThat()
+			->matchesRequestHandler(self::DEFAULT_TEST_FIXTURES_NAMESPACE . 'Contact\\Email\\GetAction')
+			->hasArguments(['daniel']);
 	}
 
 	// ------------------------------------------------------------------

@@ -315,7 +315,18 @@ final class Router
 			}
 
 			$route = $this->makeRoute($fqcn);
-			$fit = $this->fitCandidate($route->parameters, $inheritedParams, $inheritedArgs, $localArgs);
+
+			// An Action (GetAction) is a standalone route: it binds ONLY the
+			// segments that follow its own namespace, never a parent's inherited
+			// args. So `/users/1/profile` won't feed `1` into Users\Profile\GetAction.
+			// Only the RESTful types (GetAll/GetOne) inherit the parent chain.
+			$childInherits = $type !== RouteType::Action;
+			$fit = $this->fitCandidate(
+				$route->parameters,
+				$childInherits ? $inheritedParams : [],
+				$childInherits ? $inheritedArgs : [],
+				$localArgs
+			);
 
 			if ($fit['castFailed']) {
 				$castFailure = true;

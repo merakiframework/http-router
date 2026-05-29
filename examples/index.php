@@ -6,7 +6,7 @@ use Meraki\Http\Router\Config;
 use Laminas\Diactoros\ServerRequestFactory;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 
-$config = Config::create('Project\\Http\\');
+$config = Config::create('Project\\Http\\')->withAdditionalMethods('propfind');
 $router = new Router($config);
 $request = ServerRequestFactory::fromGlobals();
 
@@ -19,9 +19,9 @@ $request = ServerRequestFactory::fromGlobals();
  *   GET /		-> Home\GetAction()
  *   HEAD /		-> falls back to GetAction
  *
- * Verb/Action routes (no RESTful inheritance):
+ * Verb/Action routes (no inheritance — an Action binds only the segments AFTER its own namespace):
  *   GET /contact/{person}			-> Contact\GetAction($person)
- *   GET /contact/{person}/email	-> Contact\Email\GetAction($person)
+ *   GET /contact/email/{person}	-> Contact\Email\GetAction($person)	(param is trailing; /contact/{person}/email is a 404)
  *   POST /contact/{person}			-> Contact\PostAction($person)
  *
  * Collection routes (RouteType::Collection):
@@ -51,8 +51,8 @@ $request = ServerRequestFactory::fromGlobals();
  * Sub-resource Action (parent skipped — no ID required):
  *   GET /persons/schema		-> Persons\Schema\GetAction()		('static' routes wins over 'restful' routes at same namespace)
  *   GET /persons/daniel		-> Persons\GetOneAction('daniel')	(id falls through to parent GetOneAction)
- *   GET /users/{id}/profile	-> Users\Profile\GetAction($id)
- *   GET /users/{id}/likes		-> Users\Likes\GetAllAction($id)
+ *   (An Action child does NOT inherit a RESTful parent's id — only GetAll/GetOne do.
+ *    So /users/{id}/profile is a 404; the profile route is reached via /users/profile/{id} above.)
  *
  * Variadic absorbing trailing segments (optional ints):
  *   GET /archives				-> Archives\GetAllAction()
@@ -92,6 +92,9 @@ $request = ServerRequestFactory::fromGlobals();
  *
  * 404 Not Found — URL doesn't map to any handler:
  *   GET /no-such-resource		-> 404
+ *   GET /users/1/profile		-> 404		(Profile is an Action; it won't bind the leading `1`. Only RESTful
+ * 											GetAll/GetOne children inherit a parent's args — use /users/profile/1.)
+ *   GET /contact/daniel/email	-> 404		(Email is an Action; it won't bind the leading `daniel` — use /contact/email/daniel.)
  *
  * 405 Method Not Allowed — handlers exist but not for the requested method:
  *   DELETE /contacts		-> 405, Allow: get, head, post, options
@@ -128,7 +131,7 @@ $request = ServerRequestFactory::fromGlobals();
  * 										unreachable as-defined. To reach it properly, the URL would need to be /persons/{personid}/schema/{id},
  * 										with the handler signature matching the inherited param chain.)
  */
-$result = $router->route($request->getMethod(), $request->getRequestTarget());
+$result = $router->route('get' ?? $request->getMethod(), $request->getRequestTarget());
 
 switch ($result->status) {
 	case 200:
