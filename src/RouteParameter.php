@@ -11,7 +11,7 @@ namespace Meraki\Http;
 final class RouteParameter
 {
 	/**
-	 * @param string[] $types
+	 * @param Type[] $types
 	 */
 	public function __construct(public int $position, public array $types, public string $name)
 	{
@@ -19,7 +19,13 @@ final class RouteParameter
 
 	public function hasType(string $type): bool
 	{
-		return in_array($type, $this->types);
+		foreach ($this->types as $t) {
+			if ($t->name === $type) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	public function typesAsString(): string
@@ -34,7 +40,17 @@ final class RouteParameter
 
 	public function sameTypesAs(self $other): bool
 	{
-		return $this->types === $other->types;
+		if (count($this->types) !== count($other->types)) {
+			return false;
+		}
+
+		foreach ($this->types as $i => $t) {
+			if (!$t->equals($other->types[$i])) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	public function sameNameAs(self $other): bool
@@ -45,7 +61,7 @@ final class RouteParameter
 	public function equals(self $other): bool
 	{
 		return $this->position === $other->position
-			&& $this->types === $other->types;
+			&& $this->sameTypesAs($other);
 	}
 
 	public function __toString(): string

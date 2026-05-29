@@ -43,19 +43,19 @@ final class RouteParameters implements \Countable
 			if ($param->isVariadic()) {
 				$variadic = new RouteParameter(
 					$param->getPosition(),
-					self::toTypeList($param->getType()),
+					self::toTypes($param->getType()),
 					$param->getName()
 				);
 			} elseif ($param->isOptional()) {
 				$optional[] = new RouteParameter(
 					$param->getPosition(),
-					self::toTypeList($param->getType()),
+					self::toTypes($param->getType()),
 					$param->getName()
 				);
 			} else {
 				$required[] = new RouteParameter(
 					$param->getPosition(),
-					self::toTypeList($param->getType()),
+					self::toTypes($param->getType()),
 					$param->getName()
 				);
 			}
@@ -165,19 +165,19 @@ final class RouteParameters implements \Countable
 	}
 
 	/**
-	 * @return string[]
+	 * @return Type[]
 	 */
-	private static function toTypeList(?\ReflectionType $type): array
+	private static function toTypes(?\ReflectionType $type): array
 	{
-		/** @var string[] $types */
+		/** @var Type[] $types */
 		$types = [];
 
 		if ($type instanceof \ReflectionUnionType) {
 			foreach ($type->getTypes() as $t) {
-				$types = array_merge($types, self::toTypeList($t));
+				$types = array_merge($types, self::toTypes($t));
 			}
 		} elseif ($type instanceof \ReflectionNamedType) {
-			$types[] = $type->getName();
+			$types[] = Type::fromReflection($type);
 		}
 
 		return $types;

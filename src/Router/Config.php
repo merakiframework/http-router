@@ -64,12 +64,28 @@ final class Config
 	public array $supportedMethods = ['get', 'head', 'post', 'put', 'delete', 'options', 'patch'];
 
 	/**
+	 * Casters that turn raw URL segments into typed arguments, tried in order
+	 * (first whose supports() matches wins). Defaults cover the built-in types;
+	 * register your own with withCaster() to support enums, value objects, etc.
+	 *
+	 * @psalm-readonly-allow-private-mutation
+	 * @var list<Caster>
+	 */
+	public array $casters;
+
+	/**
 	 * @psalm-mutation-free
 	 */
 	private function __construct(string $namespace)
 	{
 		$this->setNamespace($namespace);
 		$this->logger = new NullLogger();
+		$this->casters = [
+			new StringCaster(),
+			new IntCaster(),
+			new FloatCaster(),
+			new ArrayCaster(),
+		];
 	}
 
 	/**
@@ -153,6 +169,21 @@ final class Config
 				$cloned->supportedMethods[] = $lower;
 			}
 		}
+
+		return $cloned;
+	}
+
+	/**
+	 * Register one or more casters for additional (or overriding) parameter
+	 * types. New casters are prepended, so they take precedence over the
+	 * built-in defaults when both support the same type.
+	 *
+	 * @psalm-external-mutation-free
+	 */
+	public function withCaster(Caster $caster, Caster ...$casters): self
+	{
+		$cloned = clone $this;
+		$cloned->casters = array_values([$caster, ...$casters, ...$cloned->casters]);
 
 		return $cloned;
 	}

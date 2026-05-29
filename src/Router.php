@@ -5,14 +5,13 @@ namespace Meraki\Http;
 
 use Meraki\Http\Router\Result;
 use Meraki\Http\Router\Config;
-use Meraki\Http\Router\StringType;
 use Meraki\Http\Router\Level;
 use Meraki\Http\Router\MatchOutcome;
 use Meraki\Http\Router\MatchFailure;
 use Meraki\Http\Router\PickedAction;
 use Meraki\Http\Router\Exception\UnallowedVariadicParameter;
 use Meraki\Http\Router\Exception\SignatureMismatch;
-use RuntimeException;
+use Meraki\Http\Router\Exception\CannotCast;
 
 /**
  * Class-driven HTTP router. The action class name encodes the developer's
@@ -370,6 +369,7 @@ final class Router
 	 *         args === null  -> signature doesn't fit structurally
 	 *         castFailed      -> a value couldn't cast to its param's type (-> 422)
 	 *         params          -> required+optional params (for inheritance on match)
+	 * @psalm-mutation-free
 	 */
 	private function fitCandidate(
 		RouteParameters $params,
@@ -399,7 +399,7 @@ final class Router
 			try {
 				/** @psalm-suppress MixedAssignment */
 				$boundArgs[] = $this->castArg(array_shift($remaining), $param->types);
-			} catch (RuntimeException) {
+			} catch (CannotCast) {
 				return ['args' => null, 'castFailed' => true, 'params' => $allParams];
 			}
 		}
@@ -413,7 +413,7 @@ final class Router
 				try {
 					/** @psalm-suppress MixedAssignment */
 					$boundArgs[] = $this->castArg($extra, $params->variadic->types);
-				} catch (RuntimeException) {
+				} catch (CannotCast) {
 					return ['args' => null, 'castFailed' => true, 'params' => $allParams];
 				}
 			}
@@ -582,32 +582,35 @@ final class Router
 	}
 
 	/**
-	 * Cast a URL segment to one of the parameter's accepted types. Throws
-	 * RuntimeException if no type works — null is NOT used as a "couldn't
-	 * cast" sentinel because some params actually accept null.
+	 * Cast a URL segment to one of the parameter's accepted types, using the
+	 * configured casters (first whose supports() matches a type wins). Throws
+	 * CannotCast if no type works — null is NOT used as a "couldn't cast"
+	 * sentinel because some params actually accept null.
 	 *
-	 * @param string[] $types
+	 * @param Type[] $types
+	 * @psalm-mutation-free
 	 */
 	private function castArg(string $value, array $types): mixed
 	{
 		foreach ($types as $type) {
-			if ($type === 'null') {
+			if ($type->isNull()) {
 				continue;
 			}
-			try {
-				/** @psalm-suppress MixedAssignment */
-				return StringType::fromString($value)->castTo($type);
-			} catch (RuntimeException) {
-				continue;
-			} catch (\InvalidArgumentException) {
-				continue;
+			foreach ($this->config->casters as $caster) {
+				if (!$caster->supports($type)) {
+					continue;
+				}
+				try {
+					/** @psalm-suppress MixedAssignment */
+					return $caster->cast($value, $type);
+				} catch (CannotCast) {
+					// This caster owns the type but the value is invalid; no
+					// other caster can rescue it, so try the next union member.
+					break;
+				}
 			}
 		}
-		throw new RuntimeException(sprintf(
-			"Cannot cast '%s' to any of: %s",
-			$value,
-			implode(', ', $types)
-		));
+		throw CannotCast::noCasterFor($value, implode(', ', $types));
 	}
 
 	/**
