@@ -14,6 +14,6 @@ final class GetAction
 {
 	public function __invoke(string $person)
 	{
-		return new TextResponse("POST /contact/email/$person");
+		return new TextResponse("GET /contact/email/$person");
 	}
 }
