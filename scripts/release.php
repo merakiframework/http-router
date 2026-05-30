@@ -84,7 +84,11 @@ $bumpFlag = match ($bump) {
 	'first'         => '--first-release',
 	default         => fail("unknown bump '{$bump}'; expected: auto, patch, minor, major, alpha, first"),
 };
-$command = trim("vendor/bin/conventional-changelog --commit --no-interaction {$bumpFlag}");
+$baseDir = realpath(__DIR__ . '/..');
+if (!is_dir($baseDir . '/vendor/bin')) {
+	fail('dependencies not installed — run `composer install` first');
+}
+$command = trim($baseDir . "/vendor/bin/conventional-changelog --commit --no-interaction {$bumpFlag}");
 if (run($command) !== 0) {
 	fail('changelog/tag step failed — the format commit (if any) is still in place');
 }
