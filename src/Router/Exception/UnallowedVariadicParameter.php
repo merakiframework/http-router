@@ -4,9 +4,13 @@ declare(strict_types=1);
 namespace Meraki\Http\Router\Exception;
 
 use Meraki\Http\Route;
+use Meraki\Http\Router\Exception;
 use InvalidArgumentException;
 
-final class UnallowedVariadicParameter extends InvalidArgumentException
+/**
+ * @psalm-api
+ */
+final class UnallowedVariadicParameter extends InvalidArgumentException implements Exception
 {
 	/**
 	 * @psalm-mutation-free

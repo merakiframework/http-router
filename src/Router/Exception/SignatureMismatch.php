@@ -7,6 +7,9 @@ use Meraki\Http\Router\Exception;
 use Meraki\Http\Route;
 use RuntimeException;
 
+/**
+ * @psalm-api
+ */
 final class SignatureMismatch extends RuntimeException implements Exception
 {
 	/**

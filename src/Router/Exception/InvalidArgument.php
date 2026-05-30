@@ -6,6 +6,9 @@ namespace Meraki\Http\Router\Exception;
 use Meraki\Http\Router\Exception;
 use InvalidArgumentException;
 
+/**
+ * @psalm-api
+ */
 final class InvalidArgument extends InvalidArgumentException implements Exception
 {
 	/**

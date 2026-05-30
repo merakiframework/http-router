@@ -3,48 +3,65 @@ Maps HTTP requests to HTTP responses in PHP 8.4+.
 
 ## Features
 
-- [x] root path "/" mappings
-- [x] configure root path sub-namespace
-- [x] GET http method
-- [x] POST http method
-- [x] PUT http method
-- [x] DELETE http method
-- [x] OPTIONS http method
-- [x] PATCH http method
-- [x] HEAD http method
-- [x] Auto-synthesized OPTIONS handler for allowed methods at a route
-- [x] Auto-synthesized HEAD handler from GET handler
-- [ ] prevent alternative root path sub-namespace mapping (e.g. "/" is also available at "/home")
-- [x] configure action prefix and suffixes
-- [x] configure action naming conventions for RESTful routes (e.g. GetAllAction, GetOneAction, etc.)
-- [x] 'static' routes (no RESTful semantics, just verb-based routing)
-- [x] disambiguation of 'static' routes vs RESTful routes at same namespace (e.g. /users/create is not treated as a RESTful route with 'create' as an ID)
-- [x] variadic routing (trailing parameters)
-- [x] nested/child resources (with parameter 'inheritence' from parent resource)
-- [x] required parameter routing
-- [x] optional parameter routing
-- [x] integer parameters
-- [x] string parameters
-- [x] array parameters (CSV in URL segment, e.g. /users/ids/1,2,3)
-- [x] float parameters
-- [x] Enum parameters (backed by value; pure enums by case name)
-- [x] union types (int|string)
-- [x] value-object parameters (constructor-driven, nesting supported, e.g. Date(Year, Month, Day))
-- [x] UUID parameters (via ramsey/uuid — install it yourself; the caster is inert otherwise)
-- [x] pluggable custom parameter types (register a Caster via Config::withCaster())
-- [x] allowed methods provided for 405 results
-- [ ] accepted types provided for 406 results
-- [ ] cache results
-- [ ] logging
-- [x] provide custom logger
-- [ ] provide custom negotiator (for negotiating media-types/languages/etc.)
-- [ ] negotiate media-types
-- [ ] negotiate languages
-- [ ] Concurrency support for Swoole
-- [ ] Reverse routing
-- [ ] route dumper
-- [ ] route handler generator
-- [ ] add ability to ignore route handler parameters (e.g. allow for routing to a handler with signature `function __invoke(Request $request, int $id, string $action)` where $request will be ignored for routing purposes and only $id and $action will be used to match the URL segments)
+**Routing model**
+- Root path `/` mapping (configurable sub-namespace, default `Home`)
+- RESTful route types from the class name alone — no inflection, no route files: `GetAllAction` (Collection), `GetOneAction` (Item), `GetAction` (Action / verb / static)
+- Nested resources with parameter inheritance from the parent route (e.g. `/states/{state}/suburbs/{suburb}`)
+- Disambiguation of static (`Action`) and RESTful routes at the same namespace — `/users/create` resolves to `Users\Create\GetAction`, not `Users\GetOneAction('create')`
+- Variadic routing (trailing parameters absorbed by `...$args`)
+- Configurable action prefix, suffix, and singular/plural indicators via `Router\Config`
+
+**HTTP methods**
+- `GET`, `POST`, `PUT`, `PATCH`, `DELETE` mapped from method-prefixed class names
+- `HEAD` auto-derived from `GET` (body stripped at the SAPI layer)
+- `OPTIONS` auto-synthesised (`204` + `Allow:`) listing every method available at the URL
+- Additional methods (WebDAV, etc.) via `Config::withAdditionalMethods('propfind', …)`
+- Allowed-methods list returned on `405`; method discovery is **poisoning-proof** (one misconfigured method doesn't hide the others)
+
+**Parameters (via the `Caster` system)**
+- Required, optional, and variadic parameters
+- Built-in types: `string` (universal — never fails), `int`, `float`, `array` (CSV), enums (backed by value; pure enums by case name, case-insensitive), `UuidInterface` (requires `ramsey/uuid`)
+- Union types (e.g. `int|string`) — first matching type wins; the universal `string` caster takes precedence in a union
+- Value-object parameters (constructor-driven, arbitrary nesting — `Date(Year, Month, Day)` consumes one segment per leaf) — opt-in via `Config::withCaster(new ValueObjectCaster())`
+- Custom parameter types: register your own `Caster` via `Config::withCaster()`
+
+**Status semantics**
+- `400` URL too short for a required parameter (or a value object's required ctor params)
+- `404` no route of that shape (including too-many segments)
+- `405` method not allowed, with `Allow:` populated
+- `422` route matched but a value couldn't cast to its parameter's type
+- `204` auto-synthesised `OPTIONS` response
+- Misconfigured handler trees throw (`UnallowedVariadicParameter`, `SignatureMismatch`) instead of silently mis-routing — surface the developer error
+
+**Extensibility**
+- Custom PSR-3 logger via `Config::withLogger()`
+- `Config` is immutable; all extension points are pluggable `Caster` implementations or `with*()` config methods
+
+## Roadmap
+
+What's coming after alpha, grouped roughly by theme:
+
+**Content negotiation** (planned for the negotiation milestone)
+- Pluggable media-type / language negotiator
+- `406 Not Acceptable` with the accepted types in the response
+
+**Observability**
+- Built-in logging hooks at route-resolution boundaries (the custom logger already plugs in via `Config::withLogger()`; the router doesn't emit log events yet)
+
+**Performance**
+- Optional route/reflection cache (route resolution today does `class_exists` per candidate + reflection per matched handler — a request-scoped cache is the obvious win)
+
+**Routing extras**
+- Prevent alternative root-path aliasing (so `/` and `/home` aren't both routable to `Home\GetAction`)
+- Ignore non-URL handler parameters — e.g. let a handler typed `__invoke(Request $request, int $id)` skip `$request` for routing purposes and only consume `$id` from the URL
+
+**Tooling**
+- Reverse routing (build a URL from a handler class + arguments)
+- Route dumper (enumerate every routable URL from the handler tree)
+- Route-handler generator (scaffold a handler class for a given URL shape)
+
+**Runtime**
+- Concurrency support for Swoole (the router is stateless — likely already works, but needs verification + a documented setup)
 
 ## Installation
 
@@ -54,66 +71,68 @@ composer install meraki/http-router
 
 ## Usage
 
-Standard usage is simple. Just instantiate the router, pass the request method and request target, then handle the result:
+Instantiate the router, pass the request method and request target, then handle the result.
 
 ```php
 <?php
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Meraki\Http\Router;
+use Meraki\Http\Router\Config;
+use Meraki\Http\Router\Exception\SignatureMismatch;
+use Meraki\Http\Router\Exception\UnallowedVariadicParameter;
 use Laminas\Diactoros\ServerRequestFactory;
 
-$config = new Router\Config('Project\\Http\\');
-$router = new Router($config);
+$router = new Router(Config::create('Project\\Http\\'));
 $request = ServerRequestFactory::fromGlobals();
 
 try {
-	$result = $router->route($request);
-} catch (Router\Exception\SignatureMismatch|Router\Exception\UnallowedVariadicParameter $e) {
-	// warn about misconfigured route handler signatures (e.g. missing required parameter, variadic parameter not last, etc.)
+	$result = $router->route($request->getMethod(), $request->getRequestTarget());
+} catch (UnallowedVariadicParameter | SignatureMismatch $e) {
+	// Misconfigured handler tree (a variadic parent that shadows a child, or a
+	// nested RESTful handler with no addressed parent). These are developer
+	// errors — fix the handler classes, don't ignore.
 }
 
 switch ($result->status) {
 	case 200:
-		// get the matched route
 		$route = $result->route;
-
-		// access info about the matching route
-		$requestHandler = $route->requestHandler;
-		$invokeMethod = $route->invokeMethod;
-		$params = $route->parameters;
+		// $route->requestHandler is the matched class-string,
+		// $route->invokeMethod the method to call (default '__invoke'),
+		// $route->arguments the bound parameters in order.
+		$handler = new ($route->requestHandler)();
+		$response = $handler->{$route->invokeMethod}(...$route->arguments);
 		break;
 
 	case 204:
-		// the request was successfully processed - auto-synthesized options
+		// Auto-synthesised OPTIONS: $result->allowedMethods lists every method
+		// available at this URL — emit them in the Allow header.
 		break;
 
 	case 400:
-		// the request that was malformed
-		$request = $result->request;
+		// URL is too short for a required parameter (or a value object's
+		// required constructor segments are missing).
 		break;
 
 	case 404:
-		// the request that couldn't be matched
-		$request = $result->request;
+		// No route of that shape.
 		break;
 
 	case 405:
-		// fully qualified class name that was built
-		$allowedMethods = $result->allowedMethods;
+		// Handlers exist at this URL but not for the requested method —
+		// $result->allowedMethods carries the Allow list.
 		break;
 
 	case 422:
-		// the route that was closest to matching (e.g. if the URL was correct but a parameter value was of the wrong type)
-		$closestMatches = $result->closestMatches;
+		// The route was matched but a segment couldn't cast to its parameter's
+		// type (e.g. "abc" -> int).
 		break;
-
-	default:
-		// 500 internal server error
 }
 ```
 
-To see some other use cases, look at the `examples` directory in the source code. For more advanced setups, check out the documentation, especially the section on configuration.
+`route()` deliberately takes the **method and request target as strings**, not a request object, so the router doesn't depend on any particular HTTP framework. To support content negotiation later, a small request-context object may be added.
+
+See [`examples/`](examples/) for a runnable demo of every routing behaviour; the [examples README](examples/README.md) catalogues each URL with what it demonstrates.
 
 ## Intentions and design decisions
 
@@ -151,6 +170,8 @@ To see some other use cases, look at the `examples` directory in the source code
 9. **Misconfigurations surface as exceptions, not silent mis-routes.** A variadic parent that would permanently shadow a child route throws `UnallowedVariadicParameter`; an unreachable nested RESTful handler throws `SignatureMismatch`. These are developer errors in the handler tree, so they are raised rather than quietly returning a `404`.
 
 10. **Status codes are precise.** `400` = the URL is too short for a required parameter (structurally malformed); `404` = no route of that shape (including *too many* segments); `422` = a route matched but a value can't cast to its parameter's type.
+
+11. **URLs are matched case-insensitively.** The whole request target is lower-cased before matching, so `/Users/1` and `/users/1` resolve to the same handler. The lower-cased segment is also what reaches the caster, so a pure (unbacked) enum's case-name match (e.g. `Month::August`) is intentionally **case-insensitive**. Use lower-case for string-backed enum values and URL-friendly value-object inputs; if you need original case preserved in a bound value, type the parameter as `string` (universal) rather than relying on case for matching.
 
 ### How routing works
 

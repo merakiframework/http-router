@@ -1,7 +1,24 @@
 {
     "name": "meraki/http-router",
-    "description": "Maps HTTP requests to HTTP responses in PHP 8+.",
+    "description": "Class-driven HTTP router for PHP 8.4+ — the action class name encodes intent (Collection / Item / Action), with no inflection, no route files, and pluggable casters for typed parameters.",
     "type": "library",
+    "keywords": [
+        "http",
+        "router",
+        "routing",
+        "rest",
+        "restful",
+        "convention-over-configuration",
+        "class-driven",
+        "no-inflection",
+        "caster",
+        "value-object"
+    ],
+    "homepage": "https://github.com/merakiframework/http-router",
+    "support": {
+        "issues": "https://github.com/merakiframework/http-router/issues",
+        "source": "https://github.com/merakiframework/http-router"
+    },
     "require": {
         "php": "^8.4",
         "willdurand/negotiation": "^3.1",

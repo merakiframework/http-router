@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace Meraki\Http;
 
+/**
+ * @internal
+ * @psalm-internal Meraki\Http
+ */
 final class RequestTarget
 {
 	private string $path;

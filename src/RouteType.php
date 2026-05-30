@@ -14,6 +14,8 @@ namespace Meraki\Http;
  *
  * - Action: handler whose class has no indicator suffix (e.g. GetAction).
  *   Represents a static/verb route with no implied RESTful semantics.
+ *
+ * @psalm-api
  */
 enum RouteType: string
 {
