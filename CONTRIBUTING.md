@@ -68,7 +68,7 @@ You can create a `.php-cs-fixer.php` file in the root directory of this project 
 
 ## Releases
 
-Releases are managed by contributors with write-access to the repository. The release script (`bin/release.php`) does the same steps in the same order every time, so you don't have to think about it:
+Releases are managed by contributors with write-access to the repository. The release script (`scripts/release.php`) does the same steps in the same order every time, so you don't have to think about it:
 
 1. **Refuse to start with a dirty working tree.** Commit or stash first.
 2. **CI gate** — runs `composer ci` (validate + analyse + test). Aborts the release if anything fails.

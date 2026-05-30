@@ -73,12 +73,12 @@
             "phpunit-watcher watch"
         ],
         "changelog": "conventional-changelog",
-        "release": "php bin/release.php",
-        "release:patch": "php bin/release.php patch",
-        "release:minor": "php bin/release.php minor",
-        "release:major": "php bin/release.php major",
-        "release:alpha": "php bin/release.php alpha",
-        "release:first": "php bin/release.php first"
+        "release": "php scripts/release.php",
+        "release:patch": "php scripts/release.php patch",
+        "release:minor": "php scripts/release.php minor",
+        "release:major": "php scripts/release.php major",
+        "release:alpha": "php scripts/release.php alpha",
+        "release:first": "php scripts/release.php first"
     },
     "config": {
         "allow-plugins": {
