@@ -36,7 +36,9 @@
         "ramsey/conventional-commits": "^1.7",
         "laminas/laminas-httphandlerrunner": "^2.13",
         "ramsey/uuid": "^4.9",
-        "phpbench/phpbench": "^1.6"
+        "phpbench/phpbench": "^1.6",
+        "symfony/console": "^7.3",
+        "symfony/yaml": "^7.3"
     },
     "license": "MIT",
     "authors": [
@@ -71,10 +73,12 @@
             "phpunit-watcher watch"
         ],
         "changelog": "conventional-changelog",
-        "release": "conventional-changelog --commit",
-        "release:patch": "conventional-changelog --patch --commit",
-        "release:minor": "conventional-changelog --minor --commit",
-        "release:major": "conventional-changelog --major --commit"
+        "release": "php bin/release.php",
+        "release:patch": "php bin/release.php patch",
+        "release:minor": "php bin/release.php minor",
+        "release:major": "php bin/release.php major",
+        "release:alpha": "php bin/release.php alpha",
+        "release:first": "php bin/release.php first"
     },
     "config": {
         "allow-plugins": {

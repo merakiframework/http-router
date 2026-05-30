@@ -68,21 +68,38 @@ You can create a `.php-cs-fixer.php` file in the root directory of this project 
 
 ## Releases
 
-Releases are managed by contributors with write-access to the repository. For reference, the following scripts are related to this process.
+Releases are managed by contributors with write-access to the repository. The release script (`bin/release.php`) does the same steps in the same order every time, so you don't have to think about it:
 
-### `composer run-script changelog` or `composer changelog`
+1. **Refuse to start with a dirty working tree.** Commit or stash first.
+2. **CI gate** — runs `composer ci` (validate + analyse + test). Aborts the release if anything fails.
+3. **Format** — runs `composer format`; if cs-fixer changed anything, it's committed as a separate `style: format code (pre-release)` commit, so the release commit itself stays purely a "release" commit (changelog + version + tag).
+4. **Changelog + version + tag** — runs `marcocesarato/php-conventional-changelog` which writes `CHANGELOG.md`, bumps the version, commits, and creates the tag.
 
-Run this command to see a list of all changes commited since the last release. This command will tell you whether your changes are considered a patch, minor, or major according to semver requirements.
+When the script finishes, push with:
 
-### `composer run-script release` or `composer release`
+```
+git push --follow-tags
+```
 
-Generate a new release based off all commits made since last release and commit it to the repository. This is a manual process and no git hook exists for this, yet.
+### `composer changelog`
 
-### `composer run-script release:patch` or `composer release:patch`
-### `composer run-script release:minor` or `composer release:minor`
-### `composer run-script release:major` or `composer release:major`
+Preview only — generates/updates `CHANGELOG.md` without committing or tagging. Useful for seeing what the next release would look like.
 
-Same as above, but forces a specific release type of patch, minor, or major.
+### `composer release` (auto-bump)
+
+Run the full release flow. The bump type defaults to `patch` (the tool's default).
+
+### `composer release:patch` / `release:minor` / `release:major`
+
+Same as `release`, but force a specific bump type.
+
+### `composer release:alpha`
+
+Tag a pre-release alpha (e.g. `1.0.0-alpha.1`).
+
+### `composer release:first`
+
+For the very first release — passes `--first-release` to the changelog tool so it tags `1.0.0` instead of bumping from a non-existent previous tag.
 
 ## Commit messages
 
