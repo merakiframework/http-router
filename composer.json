@@ -35,7 +35,8 @@
         "captainhook/captainhook": "^5.29",
         "ramsey/conventional-commits": "^1.7",
         "laminas/laminas-httphandlerrunner": "^2.13",
-        "ramsey/uuid": "^4.9"
+        "ramsey/uuid": "^4.9",
+        "phpbench/phpbench": "^1.6"
     },
     "license": "MIT",
     "authors": [
@@ -58,6 +59,7 @@
     "scripts": {
         "lint": "psalm",
         "test": "phpunit",
+        "bench": "phpbench run --report=aggregate",
         "format": "php-cs-fixer fix -vvv",
         "develop": [
             "Composer\\Config::disableProcessTimeout",
