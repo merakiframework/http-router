@@ -37,7 +37,7 @@ final class EnumCaster implements Caster
 		$enum = $type->name;
 
 		/** @psalm-suppress ImpureMethodCall */
-		$isBacked = (new \ReflectionEnum($enum))->isBacked();
+		$isBacked = new \ReflectionEnum($enum)->isBacked();
 
 		if ($isBacked) {
 			/** @var class-string<\BackedEnum> $enum */
@@ -60,7 +60,7 @@ final class EnumCaster implements Caster
 	private function fromBacked(string $enum, string $segment): ?\BackedEnum
 	{
 		/** @psalm-suppress ImpureMethodCall */
-		$backing = (string) (new \ReflectionEnum($enum))->getBackingType();
+		$backing = (string) new \ReflectionEnum($enum)->getBackingType();
 
 		if ($backing === 'int') {
 			if (!preg_match('/^-?\d+$/', $segment)) {

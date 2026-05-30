@@ -46,13 +46,13 @@ final class CasterExtensionTest extends TestCase
 	public function custom_caster_overrides_a_builtin_end_to_end(): void
 	{
 		// Default config: /archives/2026 binds 2026 as an int -> 200.
-		$this->assertSame(200, (new Router(self::NS))->route('get', '/archives/2026')->status);
+		$this->assertSame(200, new Router(self::NS)->route('get', '/archives/2026')->status);
 
 		// A custom int caster that rejects every value takes precedence over the
 		// built-in IntCaster, so the same URL can no longer bind its int -> 422.
 		$config = Config::create(self::NS)->withCaster($this->rejectIntCaster());
 
-		$this->assertSame(422, (new Router($config))->route('get', '/archives/2026')->status);
+		$this->assertSame(422, new Router($config)->route('get', '/archives/2026')->status);
 	}
 
 	private function rejectIntCaster(): Caster

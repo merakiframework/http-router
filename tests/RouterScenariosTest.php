@@ -43,7 +43,7 @@ final class RouterScenariosTest extends TestCase
 		array $args,
 		?array $allowed
 	): void {
-		$result = (new Router(self::NS))->route($method, $url);
+		$result = new Router(self::NS)->route($method, $url);
 
 		$assert = $this->assertResult($result)->hasStatusOf($status);
 
@@ -136,7 +136,7 @@ final class RouterScenariosTest extends TestCase
 	{
 		$this->expectException($exceptionClass);
 
-		(new Router(self::NS))->route($method, $url);
+		new Router(self::NS)->route($method, $url);
 	}
 
 	/**
@@ -159,7 +159,7 @@ final class RouterScenariosTest extends TestCase
 	{
 		$config = Config::create(self::NS)->withAdditionalMethods('propfind');
 
-		$result = (new Router($config))->route('propfind', '/contacts');
+		$result = new Router($config)->route('propfind', '/contacts');
 
 		$this->assertResult($result)
 			->hasStatusOf(200)

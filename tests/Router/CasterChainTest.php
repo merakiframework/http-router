@@ -57,7 +57,7 @@ final class CasterChainTest extends TestCase
 	#[Test()]
 	public function returns_cannot_cast_when_no_caster_supports_the_type(): void
 	{
-		$result = (new CasterChain([]))->cast(['x'], $this->int);
+		$result = new CasterChain([])->cast(['x'], $this->int);
 
 		$this->assertSame(CastStatus::CannotCast, $result->status);
 	}
@@ -65,7 +65,7 @@ final class CasterChainTest extends TestCase
 	#[Test()]
 	public function returns_incomplete_when_called_with_no_segments(): void
 	{
-		$result = (new CasterChain([new IntCaster()]))->cast([], $this->int);
+		$result = new CasterChain([new IntCaster()])->cast([], $this->int);
 
 		$this->assertSame(CastStatus::IncompleteValue, $result->status);
 	}
@@ -75,14 +75,17 @@ final class CasterChainTest extends TestCase
 	{
 		// A caster that always reports incomplete propagates through the chain.
 		$alwaysIncomplete = new class () implements Caster {
-			public function supports(Type $type): bool { return $type->name === 'int'; }
+			public function supports(Type $type): bool
+			{
+				return $type->name === 'int';
+			}
 			public function cast(array $segments, Type $type, CasterChain $chain): CastResult
 			{
 				return CastResult::incomplete();
 			}
 		};
 
-		$result = (new CasterChain([$alwaysIncomplete]))->cast(['x'], $this->int);
+		$result = new CasterChain([$alwaysIncomplete])->cast(['x'], $this->int);
 
 		$this->assertSame(CastStatus::IncompleteValue, $result->status);
 	}

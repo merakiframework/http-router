@@ -58,7 +58,7 @@ final class ValueObjectCaster implements Caster
 		 * @var class-string $class
 		 */
 		$class = $type->name;
-		$constructor = (new \ReflectionClass($class))->getConstructor();
+		$constructor = new \ReflectionClass($class)->getConstructor();
 
 		if ($constructor === null) {
 			return CastResult::cannotCast();

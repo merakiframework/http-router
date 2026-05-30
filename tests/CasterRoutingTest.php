@@ -27,7 +27,7 @@ final class CasterRoutingTest extends TestCase
 	#[Test()]
 	public function enum_segment_binds_to_the_enum(): void
 	{
-		$result = (new Router(self::NS))->route('get', '/cards/hearts');
+		$result = new Router(self::NS)->route('get', '/cards/hearts');
 
 		$this->assertSame(200, $result->status);
 		$this->assertSame(self::NS . 'Cards\\GetOneAction', $result->route?->requestHandler);
@@ -37,7 +37,7 @@ final class CasterRoutingTest extends TestCase
 	#[Test()]
 	public function unknown_enum_value_is_unprocessable(): void
 	{
-		$this->assertSame(422, (new Router(self::NS))->route('get', '/cards/joker')->status);
+		$this->assertSame(422, new Router(self::NS)->route('get', '/cards/joker')->status);
 	}
 
 	#[Test()]
@@ -45,7 +45,7 @@ final class CasterRoutingTest extends TestCase
 	{
 		$uuid = Uuid::uuid4()->toString();
 
-		$result = (new Router(self::NS))->route('get', '/tokens/' . $uuid);
+		$result = new Router(self::NS)->route('get', '/tokens/' . $uuid);
 
 		$this->assertSame(200, $result->status);
 		$arg = $result->route?->arguments[0] ?? null;
@@ -56,7 +56,7 @@ final class CasterRoutingTest extends TestCase
 	#[Test()]
 	public function malformed_uuid_is_unprocessable(): void
 	{
-		$this->assertSame(422, (new Router(self::NS))->route('get', '/tokens/not-a-uuid')->status);
+		$this->assertSame(422, new Router(self::NS)->route('get', '/tokens/not-a-uuid')->status);
 	}
 
 	#[Test()]
@@ -97,6 +97,6 @@ final class CasterRoutingTest extends TestCase
 	public function value_object_route_needs_the_opt_in_caster(): void
 	{
 		// Without the ValueObjectCaster, no caster handles the Date param.
-		$this->assertSame(422, (new Router(self::NS))->route('get', '/posts/2026/August/27')->status);
+		$this->assertSame(422, new Router(self::NS)->route('get', '/posts/2026/August/27')->status);
 	}
 }

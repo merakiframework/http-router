@@ -16,7 +16,7 @@ final class RequestTargetTest extends TestCase
 	#[DataProvider('paths')]
 	public function get_segments_returns_expected_list(string $path, array $expected): void
 	{
-		$this->assertSame($expected, (new RequestTarget($path))->getSegments());
+		$this->assertSame($expected, new RequestTarget($path)->getSegments());
 	}
 
 	public static function paths(): array
@@ -35,7 +35,7 @@ final class RequestTargetTest extends TestCase
 	#[Test()]
 	public function lowercases_the_path(): void
 	{
-		$this->assertSame(['contacts'], (new RequestTarget('/CONTACTS'))->getSegments());
+		$this->assertSame(['contacts'], new RequestTarget('/CONTACTS')->getSegments());
 	}
 
 	#[Test()]
