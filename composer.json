@@ -57,10 +57,15 @@
         }
     },
     "scripts": {
-        "lint": "psalm",
+        "analyse": "psalm",
         "test": "phpunit",
         "bench": "phpbench run --report=aggregate",
         "format": "php-cs-fixer fix -vvv",
+        "ci": [
+            "@composer validate --strict",
+            "@analyse",
+            "@test"
+        ],
         "develop": [
             "Composer\\Config::disableProcessTimeout",
             "phpunit-watcher watch"

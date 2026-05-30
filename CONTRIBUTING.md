@@ -26,13 +26,17 @@ This library uses [PHPUnit](https://phpunit.readthedocs.io/en/9.5/) for writing 
 
 This script starts a test server, in the foreground, and will automatically run the linter, tests, and formatting tools as you make changes. This is really the only script you need to use when contributing to this library. Press `Ctrl + C` to shutdown the development server.
 
-`composer run-script lint` or `composer lint`
+`composer analyse`
 
-Runs Psalm which is a static analysis tool that is used to check the syntax of PHP code. It is more advanced/configureable then PHP's own linting/syntax-checking tool (`php -l`). This is a git pre-commit hook and must pass before any changes can be committed.
+Runs Psalm — a static analysis tool that checks PHP types and code correctness. It's more thorough than PHP's built-in syntax checker (`php -l`). This is a git pre-commit hook and must pass before any changes can be committed.
 
-`composer run-script test` or `composer test`
+`composer test`
 
-Run all PHPUnit tests in the /tests folder and display any errors. This is also a git commit hook and all tests must pass before changes are committed. You rarely have to call this script. Use the `composer run-script develop` or `composer develop` script instead for development.
+Run all PHPUnit tests in the /tests folder. This is also a git pre-commit hook and all tests must pass before changes are committed. For day-to-day development, prefer `composer develop` which re-runs tests on file change.
+
+`composer ci`
+
+Run everything CI runs locally — `composer validate --strict`, then `composer analyse`, then `composer test`. Useful for a quick "is this push-ready?" check.
 
 ## Coding style
 

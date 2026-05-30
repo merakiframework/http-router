@@ -47,8 +47,8 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress --no-interaction
 
-    - name: Run linter (psalm)
-      run: composer lint
+    - name: Run static analysis (psalm)
+      run: composer analyse
 
     - name: Run tests (phpunit)
       run: composer test
