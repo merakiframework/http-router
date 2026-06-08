@@ -4,6 +4,18 @@
 All notable changes to this project will be documented in this file.
 <!--- END HEADER -->
 
+## [0.9.0-alpha.2](https://github.com/merakiframework/http-router/compare/v0.9.0-alpha.1...v0.9.0-alpha.2) (2026-06-08)
+
+### Bug Fixes
+
+
+##### Router
+
+* Namespace boundary is method agnostic ([af18f1](https://github.com/merakiframework/http-router/commit/af18f1ea965f11f9e25ae3aff2ba933646008d03))
+
+
+---
+
 ## [0.9.0-alpha.1](https://github.com/merakiframework/http-router/compare/v0.8.0...v0.9.0-alpha.1) (2026-05-30)
 
 ### ⚠ BREAKING CHANGES
