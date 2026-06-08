@@ -87,6 +87,7 @@ final class RouterScenariosTest extends TestCase
 			'GET /users/create (static route)' => ['get', '/users/create', 200, 'Users\\Create\\GetAction', [], null],
 			'GET /users/profile/1 (Action, parent pass-through)' => ['get', '/users/profile/1', 200, 'Users\\Profile\\GetAction', ['1'], null],
 			'GET /users/1/profile -> 404 (Action does not inherit an Item id)' => ['get', '/users/1/profile', 404, null, [], null],
+			'POST /business-details/holiday-exceptions (No parent POST action)' => ['post', '/business-details/holiday-exceptions', 200, 'BusinessDetails\\HolidayExceptions\\PostAction', [], null],
 
 			// --- Disambiguation: Action wins over Item at same namespace -----
 			'GET /persons/schema -> Schema\GetAction (not GetOneAction)' => ['get', '/persons/schema', 200, 'Persons\\Schema\\GetAction', [], null],

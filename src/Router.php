@@ -220,7 +220,7 @@ final class Router
 		foreach ($segments as $segment) {
 			$candidate = $currentNs . $this->namespaceSegmentFor($segment);
 
-			if ($this->anyActionClassExists($candidate, $method)) {
+			if ($this->isNamespaceBoundary($candidate)) {
 				$this->guardAgainstVariadicParent($currentNs, $candidate, $method);
 				$levels[] = new Level($currentNs, $currentArgs);
 				$currentNs = $candidate;
@@ -233,6 +233,23 @@ final class Router
 		$levels[] = new Level($currentNs, $currentArgs);
 
 		return $levels;
+	}
+
+	/**
+	 * Returns true if an action class exists at a namespace segment for ANY supported method.
+	 *
+	 * Must be method-agnostic so that a namespace is discoverable via GET is also
+	 * navigable when routing POST, DELETE, etc.
+	 */
+	private function isNamespaceBoundary(string $candidate): bool
+	{
+		foreach ($this->config->supportedMethods as $m) {
+			if ($this->anyActionClassExists($candidate, $m)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
