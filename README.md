@@ -136,22 +136,21 @@ See [`examples/`](examples/) for a runnable demo of every routing behaviour; the
 
 ## Intentions and design decisions
 
-1. **RESTful child resources require a parent handler for the same HTTP method, whose signature the child extends.**
+1. **A nested RESTful child needs a parent handler that can address it. The child inherits the matched parent's signature.**
 
-   For example, the following HTTP request:
+   At each non-terminal namespace level in the URL, the router needs *some* handler whose signature consumes the local args — that handler defines the parameter chain the nested child inherits. By default the router tries the **request method first**; if that finds nothing, it falls back to the methods in `Config::$addressingFallbackMethods` (defaults to `['get']` — `GET /resource/{id}` is the canonical REST way to address an item). The matched parent is used **only for signature inheritance** and is never invoked — only the deepest (primary) match is dispatched.
+
+   For example, this request:
 
    ```text
-   POST /artists/123/songs/456
+   POST /persons/123/dependents
    ```
 
-   will only work if the following two classes exist:
+   resolves to `Project\Http\Persons\Dependents\PostAllAction(string $id)` as long as `Project\Http\Persons\GetOneAction(string $id)` exists to address the person — you don't need to define a phantom `Project\Http\Persons\PostOneAction` (which would be semantically wrong; `POST /persons/{id}` has no natural REST meaning).
 
-   ```php
-   $parentResource = Project\Http\Artists\PostOneAction::class;
-   $childResource = Project\Http\Artists\Songs\PostOneAction::class;
-   ```
+   If you want the stricter pre-feature behaviour (parent must match the request method exactly), clear the fallback list: `Config::create($ns)->withAddressingFallbackMethods()`.
 
-   The `$parentResource` is never instantiated during routing, but it must exist, and `$childResource` must 'extend' its method signature. If `$parentResource` is `public function __invoke(int $artist)`, then `$childResource` must be `public function __invoke(int $artist, int $song)` or `public function __invoke(int $artist, int $song, ...$args)`. (This applies to RESTful types only — `Action` routes are standalone; see decision 5.)
+   (This applies to RESTful types only — `Action` routes are standalone; see decision 5.)
 
 2. **No PSR-7 dependency.** The library does not rely on PSR-7 for request/response objects, for the greatest compatibility between HTTP implementations.
 

@@ -158,7 +158,8 @@ final class Router
 				$level->args,
 				$inheritedParams,
 				array_values($inheritedArgs),
-				$parentMatched
+				$parentMatched,
+				$isTerminal
 			);
 
 			if ($picked->route === null) {
@@ -295,6 +296,78 @@ final class Router
 		array $localArgs,
 		array $inheritedParams,
 		array $inheritedArgs,
+		bool $parentMatched,
+		bool $isTerminal
+	): PickedAction {
+		$picked = $this->tryCandidates(
+			$ns,
+			$method,
+			$localArgs,
+			$inheritedParams,
+			$inheritedArgs,
+			$parentMatched
+		);
+
+		// Terminal level: the actual handler. Match on the request method only.
+		if ($picked->route !== null || $isTerminal) {
+			return $picked;
+		}
+
+		// Non-terminal level: the matched candidate's purpose is to provide a
+		// parameter signature the child level can inherit. If the request
+		// method has no fitting handler here, try the configured fallback
+		// methods (default ['get'] — the canonical REST addresser) to find
+		// one. The matched fallback handler is recorded in matches[] but is
+		// NOT invoked; only the deepest (primary) match is dispatched.
+		//
+		// Important: if the original method's pass already saw a real
+		// castFailed or incomplete signal, preserve it — a 422/400 from the
+		// request method beats a hypothetical 200 from a GET fallback.
+		if ($picked->castFailed || $picked->incomplete) {
+			return $picked;
+		}
+
+		foreach ($this->config->addressingFallbackMethods as $fallback) {
+			if ($fallback === $method) {
+				continue; // already tried
+			}
+
+			$retry = $this->tryCandidates(
+				$ns,
+				$fallback,
+				$localArgs,
+				$inheritedParams,
+				$inheritedArgs,
+				$parentMatched
+			);
+
+			if ($retry->route !== null) {
+				return $retry;
+			}
+		}
+
+		return $picked;
+	}
+
+	/**
+	 * Run the candidate-iteration loop for one HTTP method. Returns the matched
+	 * route, or a no-match with `castFailed`/`incomplete` set if a candidate's
+	 * signature fit structurally but a value couldn't cast / segments ran out.
+	 *
+	 * Throws SignatureMismatch when a nested Item/Collection handler exists but
+	 * the parent level was skipped (a pass-through) — the handler is
+	 * unreachable as defined; surface the misconfig instead of silent 404.
+	 *
+	 * @param list<string> $localArgs
+	 * @param list<RouteParameter> $inheritedParams
+	 * @param list<mixed> $inheritedArgs
+	 */
+	private function tryCandidates(
+		string $ns,
+		string $method,
+		array $localArgs,
+		array $inheritedParams,
+		array $inheritedArgs,
 		bool $parentMatched
 	): PickedAction {
 		// Candidate order: Action -> Collection -> Item. Try the least-implied
@@ -304,21 +377,8 @@ final class Router
 		// happen to exist with 0 params.
 		$candidates = $this->candidateActions($method);
 
-		// Tracks an Item/Collection class we excluded because the parent
-		// chain was broken (parent level was skipped). If we ultimately fail
-		// to find any match at this level, we throw using this — surfacing
-		// the misconfig instead of silently 404'ing.
 		$skippedDueToBrokenChain = null;
-
-		// Tracks whether any candidate's signature WOULD have matched the
-		// URL's arg count, but a segment couldn't cast to the expected type.
-		// If true after all candidates fail, the URL is malformed for an
-		// existing route -> 422 Unprocessable Content rather than 404.
 		$castFailure = false;
-
-		// Tracks whether a candidate started consuming segments for a value but
-		// ran out before a required (constructor) parameter was filled. If true
-		// after all candidates fail -> 400 Bad Request (missing required param).
 		$incomplete = false;
 
 		foreach ($candidates as [$className, $type]) {
@@ -375,9 +435,6 @@ final class Router
 			);
 		}
 
-		// No candidate matched. If we excluded a real Item/Collection class
-		// because the parent wasn't addressed, the handler exists but is
-		// unreachable — that's a configuration error.
 		if ($skippedDueToBrokenChain !== null) {
 			throw SignatureMismatch::nestedRestfulRouteRequiresAddressedParent(
 				$this->makeRoute($skippedDueToBrokenChain)

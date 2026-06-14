@@ -138,6 +138,39 @@ final class ConfigTest extends TestCase
 		$this->assertEquals('\\Home', $sut->rootPathSubNamespace);
 	}
 
+	#[Test()]
+	public function addressing_fallback_methods_default_to_get(): void
+	{
+		$sut = $this->createConfig();
+
+		$this->assertSame(['get'], $sut->addressingFallbackMethods);
+	}
+
+	#[Test()]
+	public function with_addressing_fallback_methods_replaces_the_list(): void
+	{
+		$sut = $this->createConfig()->withAddressingFallbackMethods('get', 'put');
+
+		$this->assertSame(['get', 'put'], $sut->addressingFallbackMethods);
+	}
+
+	#[Test()]
+	public function with_addressing_fallback_methods_normalises_to_lowercase_and_dedups(): void
+	{
+		$sut = $this->createConfig()->withAddressingFallbackMethods('GET', 'PUT', 'get');
+
+		$this->assertSame(['get', 'put'], $sut->addressingFallbackMethods);
+	}
+
+	#[Test()]
+	public function with_addressing_fallback_methods_clears_when_called_with_no_args(): void
+	{
+		// Empty list = strict mode (parent must match the request method).
+		$sut = $this->createConfig()->withAddressingFallbackMethods();
+
+		$this->assertSame([], $sut->addressingFallbackMethods);
+	}
+
 	private function createConfig()
 	{
 		return Config::create(self::REQUEST_HANDLERS_NAMESPACE);

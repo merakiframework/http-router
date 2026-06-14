@@ -100,6 +100,12 @@ final class RouterScenariosTest extends TestCase
 			'GET /states/qld/suburbs/emerald/registered-businesses' => ['get', '/states/qld/suburbs/emerald/registered-businesses', 200, 'States\\Suburbs\\RegisteredBusinesses\\GetAllAction', ['qld', 'emerald'], null],
 			'GET .../registered-businesses/cleaning/pest-control (variadic, compound word)' => ['get', '/states/qld/suburbs/emerald/registered-businesses/cleaning/pest-control', 200, 'States\\Suburbs\\RegisteredBusinesses\\GetAllAction', ['qld', 'emerald', 'cleaning', 'pest-control'], null],
 
+			// --- Cross-method nested: addressing-method fallback (default ['get']) -
+			// Persons\PostOneAction does NOT exist (POST /persons/{id} has no
+			// natural REST meaning), yet POST /persons/{pid}/dependents resolves
+			// because Persons\GetOneAction provides the parent address signature.
+			'POST /persons/daniel/dependents (parent addressed via GET fallback)' => ['post', '/persons/daniel/dependents', 200, 'Persons\\Dependents\\PostAllAction', ['daniel'], null],
+
 			// --- Variadic absorbing trailing int segments --------------------
 			'GET /archives' => ['get', '/archives', 200, 'Archives\\GetAllAction', [], null],
 			'GET /archives/2026' => ['get', '/archives/2026', 200, 'Archives\\GetAllAction', [2026], null],
@@ -153,6 +159,21 @@ final class RouterScenariosTest extends TestCase
 				'get', '/persons/schema/t', SignatureMismatch::class,
 			],
 		];
+	}
+
+	#[Test()]
+	public function addressing_fallback_can_be_disabled_for_strict_method_matching(): void
+	{
+		// With the default config (addressingFallbackMethods = ['get']),
+		// POST /persons/daniel/dependents resolves because Persons\GetOneAction
+		// provides the parent address signature. Clear the fallback list and
+		// the same URL falls back to the pre-feature behaviour: 404 because
+		// the parent Persons level has no POST handler that can address an item.
+		$config = Config::create(self::NS)->withAddressingFallbackMethods();
+
+		$result = new Router($config)->route('post', '/persons/daniel/dependents');
+
+		$this->assertResult($result)->hasStatusOf(404);
 	}
 
 	#[Test()]

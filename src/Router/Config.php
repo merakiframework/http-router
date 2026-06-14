@@ -64,6 +64,21 @@ final class Config
 	public array $supportedMethods = ['get', 'head', 'post', 'put', 'delete', 'options', 'patch'];
 
 	/**
+	 * Methods the router will try at a non-terminal (parent-addressing) level
+	 * if no candidate of the request method fits. Used purely to find an
+	 * addressing handler whose signature the child level can inherit — the
+	 * matched fallback handler is NOT invoked. Defaults to ['get'] because
+	 * `GET /resource/{id}` is the canonical REST way to address an item.
+	 *
+	 * Empty array = strict mode (no fallback; only the request method is tried).
+	 * Order matters: first method whose handler fits wins.
+	 *
+	 * @psalm-readonly-allow-private-mutation
+	 * @var list<string>
+	 */
+	public array $addressingFallbackMethods = ['get'];
+
+	/**
 	 * Casters that turn raw URL segments into typed arguments, tried in order
 	 * (first whose supports() matches wins). Defaults cover the built-in types;
 	 * register your own with withCaster() to support enums, value objects, etc.
@@ -171,6 +186,34 @@ final class Config
 				$cloned->supportedMethods[] = $lower;
 			}
 		}
+
+		return $cloned;
+	}
+
+	/**
+	 * Replace the list of methods the router falls back to when a parent
+	 * (non-terminal) namespace level has no handler for the request method.
+	 * The matched fallback handler provides the parameter signature the child
+	 * inherits; it is NOT invoked.
+	 *
+	 * Pass no arguments to clear the list (strict mode — parent must match the
+	 * request method exactly, as it did before this feature).
+	 *
+	 * @psalm-external-mutation-free
+	 */
+	public function withAddressingFallbackMethods(string ...$methods): self
+	{
+		$cloned = clone $this;
+		$normalised = [];
+
+		foreach ($methods as $m) {
+			$lower = strtolower($m);
+			if (!in_array($lower, $normalised, true)) {
+				$normalised[] = $lower;
+			}
+		}
+
+		$cloned->addressingFallbackMethods = $normalised;
 
 		return $cloned;
 	}

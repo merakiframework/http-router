@@ -72,6 +72,7 @@ A child `GetAllAction` / `GetOneAction` inherits the parent route's parameters b
 | `GET /states/qld/suburbs/emerald` | `200` `GET /states/qld/suburbs/emerald` | child Item inherits the `state` and consumes `suburb` |
 | `GET /states/qld/suburbs/emerald/registered-businesses` | `200` … | further nesting; the deepest handler's variadic absorbs nothing yet |
 | `GET /states/qld/suburbs/emerald/registered-businesses/cleaning/pest-control` | `200` … | variadic absorbs the trailing filter segments |
+| `POST /persons/daniel/dependents` | `200` `POST /persons/daniel/dependents` | **cross-method nesting** — `Persons\PostOneAction` doesn't exist (POST /persons/{id} has no REST meaning), but `Persons\GetOneAction` provides the parent address signature via the default `addressingFallbackMethods = ['get']`; child `Persons\Dependents\PostAllAction(string $id)` inherits `$id` from it |
 
 ### Action wins over RESTful at the same namespace
 
