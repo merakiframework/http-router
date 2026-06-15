@@ -4,6 +4,18 @@
 All notable changes to this project will be documented in this file.
 <!--- END HEADER -->
 
+## [0.9.0-alpha.3](https://github.com/merakiframework/http-router/compare/v0.9.0-alpha.2...v0.9.0-alpha.3) (2026-06-15)
+
+### Features
+
+
+##### Router
+
+* Addressing-method fallback for nested RESTful routes ([ac6090](https://github.com/merakiframework/http-router/commit/ac609048c232b52d60a867e2b59fba5149e44e39))
+
+
+---
+
 ## [0.9.0-alpha.2](https://github.com/merakiframework/http-router/compare/v0.9.0-alpha.1...v0.9.0-alpha.2) (2026-06-08)
 
 ### Bug Fixes
